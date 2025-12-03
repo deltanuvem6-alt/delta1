@@ -547,11 +547,95 @@ function App() {
     const handleSendTestEmail = async (email: string) => {
         console.log(`Sending test email to: ${email}`);
 
+        const testEmailHTML = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Email - DeltaNuvem</title>
+</head>
+<body style="font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background-color: #f4f4f7; margin: 0; padding: 0; color: #333;">
+    <div style="background-color: #ffffff; margin: 30px auto; padding: 0; width: 100%; max-width: 600px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden;">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%); text-align: center; padding: 40px 30px; border-bottom: 4px solid #1e40af;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
+                ✅ Teste de Email
+            </h1>
+            <p style="color: #e0e7ff; fontSize: 14px; margin: 10px 0 0; font-weight: 500;">
+                DeltaNuvem Tecnologia - Supervisor Digital
+            </p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 40px 30px; line-height: 1.8; font-size: 16px;">
+            <p style="margin: 0 0 20px; color: #1f2937; font-size: 18px; font-weight: 600;">
+                Olá! 👋
+            </p>
+            
+            <p style="margin: 0 0 20px; color: #4b5563;">
+                Este é um <strong style="color: #1d4ed8;">email de teste</strong> enviado pelo sistema <strong>DeltaNuvem - Supervisor Digital</strong>.
+            </p>
+
+            <div style="background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                <p style="margin: 0; color: #1e40af; font-weight: 600; font-size: 15px;">
+                    ✓ Sistema de Email Funcionando Corretamente
+                </p>
+                <p style="margin: 10px 0 0; color: #1e3a8a; font-size: 14px;">
+                    Se você recebeu este email, significa que o serviço de notificações está operacional e pronto para enviar alertas em tempo real.
+                </p>
+            </div>
+
+            <p style="margin: 20px 0 0; color: #4b5563;">
+                O sistema está configurado para enviar notificações automáticas sobre:
+            </p>
+
+            <ul style="margin: 15px 0; padding-left: 20px; color: #4b5563;">
+                <li style="margin-bottom: 8px;">🔔 <strong>Portaria Online/Offline</strong> - Status do vigilante</li>
+                <li style="margin-bottom: 8px;">🚨 <strong>Botão de Pânico</strong> - Alertas de emergência</li>
+                <li style="margin-bottom: 8px;">😴 <strong>Vigia Adormeceu</strong> - Falhas de confirmação</li>
+                <li style="margin-bottom: 8px;">📡 <strong>Local sem Internet</strong> - Problemas de conexão</li>
+                <li style="margin-bottom: 8px;">⏰ <strong>Sistema Ativado/Desativado</strong> - Início e fim de turnos</li>
+            </ul>
+
+            <div style="text-align: center; margin: 35px 0 25px;">
+                <div style="display: inline-block; background-color: #1d4ed8; color: #ffffff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 15px;">
+                    Sistema Operacional ✓
+                </div>
+            </div>
+
+            <p style="margin: 25px 0 0; color: #6b7280; font-size: 14px; font-style: italic;">
+                Data/Hora do Teste: ${new Date().toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'medium' })}
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f9fafb; text-align: center; padding: 30px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280;">
+            <p style="margin: 0 0 10px; font-weight: 600; color: #374151;">
+                Precisa de ajuda ou suporte técnico?
+            </p>
+            <p style="margin: 0 0 15px;">
+                <strong style="color: #1d4ed8; font-size: 16px;">📱 WhatsApp: (11) 99803-7370</strong>
+            </p>
+            <p style="margin: 15px 0 0; font-size: 12px; color: #9ca3af;">
+                © ${new Date().getFullYear()} DeltaNuvem Tecnologia. Todos os direitos reservados.
+            </p>
+            <p style="margin: 8px 0 0; font-size: 11px; color: #d1d5db;">
+                Este é um email automático do sistema de monitoramento 24h.
+            </p>
+        </div>
+
+    </div>
+</body>
+</html>
+        `;
+
         try {
             await sendEmail(
                 email,
-                'Teste de Notificação - DeltaNuvem',
-                '<h1>Teste de Email</h1><p>Este é um email de teste enviado pelo sistema DeltaNuvem.</p>'
+                '✅ Teste de Notificação - DeltaNuvem Supervisor Digital',
+                testEmailHTML
             );
 
             setShowTestEmailModal(false);
