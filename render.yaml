@@ -2,9 +2,13 @@ services:
   - type: web
     name: deltanuvem
     env: node
+    region: oregon
+    plan: free
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
       - key: VITE_SUPABASE_URL
         value: https://hrubgwggnnxyqeomhhyc.supabase.co
       - key: VITE_SUPABASE_ANON_KEY

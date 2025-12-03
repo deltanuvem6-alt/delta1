@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 
 dotenv.config();
+dotenv.config({ path: '.env.local' });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,13 +50,18 @@ if (fs.existsSync(distPath)) {
 
 // Rota para envio de e-mail
 app.post('/api/send-email', async (req, res) => {
+    console.log('📨 Recebida requisição de envio de email');
+    console.log('📦 Body:', JSON.stringify(req.body, null, 2));
+
     const { to, subject, html } = req.body;
 
     if (!process.env.SENDGRID_API_KEY) {
+        console.error('❌ ERRO: SENDGRID_API_KEY não configurada no servidor');
         return res.status(500).json({ error: 'Servidor não configurado com API Key do SendGrid.' });
     }
 
     if (!to || !subject || !html) {
+        console.error('❌ ERRO: Campos obrigatórios faltando');
         return res.status(400).json({ error: 'Faltam campos obrigatórios (to, subject, html).' });
     }
 
@@ -66,21 +72,25 @@ app.post('/api/send-email', async (req, res) => {
         html,
     };
 
+    console.log('📤 Tentando enviar para SendGrid:', { to: msg.to, from: msg.from, subject: msg.subject });
+
     try {
-        await sgMail.send(msg);
-        console.log(`📧 Email enviado para ${to}`);
+        const response = await sgMail.send(msg);
+        console.log('✅ SendGrid respondeu com sucesso!');
+        console.log('📊 Status Code:', response[0].statusCode);
+        console.log('📝 Headers:', JSON.stringify(response[0].headers));
         res.status(200).json({ message: 'Email enviado com sucesso!' });
     } catch (error) {
-        console.error('❌ Erro ao enviar email:', error);
+        console.error('❌ Erro ao enviar email via SendGrid:', error);
         if (error.response) {
-            console.error(error.response.body);
+            console.error('🔍 Detalhes do erro SendGrid:', JSON.stringify(error.response.body, null, 2));
         }
         res.status(500).json({ error: 'Falha ao enviar email.', details: error.message });
     }
 });
 
 // Qualquer outra rota retorna o index.html (SPA)
-app.get('/*', (req, res) => {
+app.get(/(.*)/, (req, res) => {
     const indexPath = path.join(__dirname, 'dist', 'index.html');
     if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
