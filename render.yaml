@@ -1,16 +1,12 @@
 services:
   - type: web
     name: deltanuvem
-    env: node
+    env: static
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    staticPublishPath: dist
     envVars:
       - key: VITE_SUPABASE_URL
-        sync: false
+        value: https://hrubgwggnnxyqeomhhyc.supabase.co
       - key: VITE_SUPABASE_ANON_KEY
-        sync: false
-      - key: SENDGRID_API_KEY
-        sync: false
-      - key: EMAIL_FROM
-        sync: false
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhydWJnd2dnbm54eXFlb21oaHljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMDUzNzAsImV4cCI6MjA3NzY4MTM3MH0.TZltc5EPe5N_gbt0i88ROUPoZtbS52Z1FImhLINehrs
 
