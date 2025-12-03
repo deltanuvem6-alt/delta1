@@ -15,7 +15,8 @@ console.log('🚀 Iniciando servidor DeltaNuvem...');
 console.log('📁 Diretório atual:', __dirname);
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001; // Porta 3001 para dev local, Render usa PORT do ambiente
+
 
 console.log('🔌 Porta configurada:', port);
 console.log('🌍 Variáveis de ambiente:', {
