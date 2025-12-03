@@ -39,7 +39,7 @@ export enum EventType {
   VigilantFailure = 'Vigia Adormeceu',
   SystemActivated = 'Sistema Ativado',
   SystemDeactivated = 'Sistema Desativado',
-  LocalSemInternet = 'Local sem Internet',
+  LocalSemInternet = 'Sem Comunicação',
 }
 
 export enum EventStatus {

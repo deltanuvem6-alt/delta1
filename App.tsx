@@ -595,7 +595,7 @@ function App() {
                 <li style="margin-bottom: 8px;">🔔 <strong>Portaria Online/Offline</strong> - Status do vigilante</li>
                 <li style="margin-bottom: 8px;">🚨 <strong>Botão de Pânico</strong> - Alertas de emergência</li>
                 <li style="margin-bottom: 8px;">😴 <strong>Vigia Adormeceu</strong> - Falhas de confirmação</li>
-                <li style="margin-bottom: 8px;">📡 <strong>Local sem Internet</strong> - Problemas de conexão</li>
+                <li style="margin-bottom: 8px;">📡 <strong>Sem Comunicação</strong> - Problemas de conexão</li>
                 <li style="margin-bottom: 8px;">⏰ <strong>Sistema Ativado/Desativado</strong> - Início e fim de turnos</li>
             </ul>
 
