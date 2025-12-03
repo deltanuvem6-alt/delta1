@@ -79,7 +79,7 @@ app.post('/api/send-email', async (req, res) => {
 });
 
 // Qualquer outra rota retorna o index.html (SPA)
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
     const indexPath = path.join(__dirname, 'dist', 'index.html');
     if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
