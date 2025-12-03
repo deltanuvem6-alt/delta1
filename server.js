@@ -17,6 +17,14 @@ console.log('📁 Diretório atual:', __dirname);
 const app = express();
 const port = process.env.PORT || 3000;
 
+console.log('🔌 Porta configurada:', port);
+console.log('🌍 Variáveis de ambiente:', {
+    PORT: process.env.PORT,
+    NODE_ENV: process.env.NODE_ENV,
+    SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? '✅ Configurada' : '❌ Não configurada',
+    EMAIL_FROM: process.env.EMAIL_FROM
+});
+
 // Configurar SendGrid
 if (process.env.SENDGRID_API_KEY) {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
