@@ -6,8 +6,13 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import fs from 'fs';
 
-dotenv.config();
-dotenv.config({ path: '.env.local' });
+// Carregar variáveis de ambiente
+// No Render, as variáveis vêm do sistema (Environment Variables)
+// Localmente, vêm do .env.local
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config({ path: '.env.local' });
+}
+dotenv.config(); // Fallback para .env padrão
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
