@@ -573,6 +573,17 @@ function App() {
                 return; // Already reported communication loss recently
             }
 
+            // Check if there's a recent activation event (Sistema Ativado or Portaria Online)
+            const recentActivationEvent = eventsForPost.find(e =>
+                (e.type === EventType.SystemActivated || e.type === EventType.GatehouseOnline) &&
+                (now.getTime() - e.timestamp.getTime()) < 3 * 60 * 1000 // Within last 3 minutes
+            );
+
+            // If recently activated, don't check for communication loss yet (give time for heartbeat to establish)
+            if (recentActivationEvent) {
+                return;
+            }
+
             // Check if the post has a recent heartbeat
             if (post.last_heartbeat) {
                 const lastHeartbeatTime = new Date(post.last_heartbeat).getTime();
@@ -584,7 +595,7 @@ function App() {
                     createEvent(post.id, EventType.LocalSemInternet);
                 }
             } else {
-                // No heartbeat at all - check if there's a recent "Sistema Ativado" event
+                // No heartbeat at all - check if there's a "Sistema Ativado" event today
                 const activationTimeToday = new Date(now);
                 activationTimeToday.setHours(activationHours, activationMinutes, 0, 0);
 
