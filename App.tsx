@@ -1026,7 +1026,11 @@ function App() {
     });
 
     const handleUpdateCompany = async (updatedCompany: Company) => {
-        const { postCount, ...companyUpdateData } = updatedCompany;
+        // Remove id and postCount from the update payload
+        const { id, postCount, ...companyUpdateData } = updatedCompany;
+
+        console.log("Updating company:", updatedCompany.id, companyUpdateData);
+
         const { data, error } = await supabase
             .from('companies')
             .update(companyUpdateData)
@@ -1034,7 +1038,11 @@ function App() {
             .select()
             .single();
 
-        if (error) return console.error("Error updating company:", error.message);
+        if (error) {
+            console.error("Error updating company:", error.message);
+            alert(`Erro ao atualizar empresa: ${error.message}`);
+            return;
+        }
 
         setCompanies(companies.map(c => c.id === updatedCompany.id ? { ...c, ...updatedCompany } : c));
         setPosts(prevPosts => prevPosts.map(post =>
