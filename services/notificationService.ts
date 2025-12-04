@@ -56,6 +56,12 @@ export const sendEventNotification = async (
     eventType: string,
     timestamp: Date
 ) => {
+    console.log(`📧 [EMAIL] Preparando notificação de evento:`);
+    console.log(`   → Para: ${companyEmail}`);
+    console.log(`   → Empresa: ${companyName}`);
+    console.log(`   → Posto: ${postName}`);
+    console.log(`   → Evento: ${eventType}`);
+
     const dateStr = timestamp.toLocaleDateString('pt-BR');
     const timeStr = timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -70,7 +76,13 @@ export const sendEventNotification = async (
         }
     );
 
-    await sendEmail(companyEmail, `DeltaNuvem - ${eventType}`, html);
+    try {
+        await sendEmail(companyEmail, `DeltaNuvem - ${eventType}`, html);
+        console.log(`✅ [EMAIL] Notificação enviada com sucesso para ${companyEmail}`);
+    } catch (error) {
+        console.error(`❌ [EMAIL] Falha ao enviar para ${companyEmail}:`, error);
+        throw error;
+    }
 };
 
 export const sendAdminNotification = async (subject: string, details: Record<string, string>) => {

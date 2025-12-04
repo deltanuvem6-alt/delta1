@@ -474,9 +474,14 @@ function App() {
 
         // Enviar notificação por email para a empresa
         try {
+            console.log(`🔍 [DEBUG] Verificando envio de email para evento ${eventType}, postId: ${postId}`);
             const post = posts.find(p => p.id === postId);
+            console.log(`🔍 [DEBUG] Post encontrado:`, post ? `${post.name} (ID: ${post.id})` : 'NÃO ENCONTRADO');
+
             if (post) {
                 const company = companies.find(c => c.id === post.companyId);
+                console.log(`🔍 [DEBUG] Empresa encontrada:`, company ? `${company.name} (Email: ${company.email})` : 'NÃO ENCONTRADA');
+
                 if (company && company.email) {
                     // Não enviar email para eventos de "Sistema Desativado" se não for crítico, 
                     // mas o requisito diz "Ativação" e "Desativação", então enviamos.
@@ -491,8 +496,10 @@ function App() {
                         EventType.VigilantFailure // Adicionando falha de vigia também pois é crítico
                     ];
 
+                    console.log(`🔍 [DEBUG] Evento ${eventType} está na lista de notificações?`, notifyEvents.includes(eventType));
+
                     if (notifyEvents.includes(eventType)) {
-                        console.log(`Sending email notification for ${eventType} to ${company.email}`);
+                        console.log(`📧 [TRIGGER] Disparando email para ${eventType} → ${company.email}`);
                         // Não aguardar o envio do email para não bloquear a UI
                         sendEventNotification(
                             company.email,
@@ -500,13 +507,20 @@ function App() {
                             post.name,
                             eventType,
                             new Date()
-                        ).catch(err => console.error("Failed to send email notification:", err));
+                        ).catch(err => console.error("❌ [EMAIL ERROR] Failed to send email notification:", err));
+                    } else {
+                        console.log(`⏭️  [SKIP] Evento ${eventType} não requer notificação por email`);
                     }
+                } else {
+                    console.log(`⚠️  [SKIP] Empresa não tem email cadastrado ou não foi encontrada`);
                 }
+            } else {
+                console.log(`⚠️  [SKIP] Posto não encontrado para envio de email`);
             }
         } catch (emailErr) {
-            console.error("Error preparing email notification:", emailErr);
+            console.error("❌ [EMAIL ERROR] Error preparing email notification:", emailErr);
         }
+
 
         return true;
     }, [isOnline, posts, companies]);
