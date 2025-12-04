@@ -6,9 +6,12 @@ services:
     plan: free
     buildCommand: npm install && npm run build
     startCommand: npm start
+    healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
         value: 20.11.0
+      - key: NODE_ENV
+        value: production
       - key: VITE_SUPABASE_URL
         value: https://hrubgwggnnxyqeomhhyc.supabase.co
       - key: VITE_SUPABASE_ANON_KEY
