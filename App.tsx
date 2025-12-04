@@ -544,41 +544,60 @@ function App() {
             const [deactivationHours, deactivationMinutes] = config.deactivationTime.split(':').map(Number);
             const deactivationTotalMinutes = deactivationHours * 60 + deactivationMinutes;
 
-            const eventsForPost = events.filter(e => e.postId === post.id);
-            const lastEvent = eventsForPost.length > 0 ? eventsForPost[0] : null;
-
-            // --- Check for missed activation ---
-            // This check runs specifically at T = activation_time + grace_period to avoid creating multiple alerts.
-            if (nowMinutes === activationTotalMinutes + gracePeriodMinutes) {
-                const activationTimeForCheck = new Date(now);
-                activationTimeForCheck.setHours(activationHours, activationMinutes, 0, 0);
-
-                // Check specifically for a "System Activated" event after the scheduled start time.
-                const hasActivated = eventsForPost.some(e =>
-                    e.type === EventType.SystemActivated &&
-                    e.timestamp >= activationTimeForCheck
-                );
-
-                if (!hasActivated) {
-                    console.log(`Post ${post.id} (${post.name}) missed activation. Creating 'Local Sem Internet' event.`);
-                    createEvent(post.id, EventType.LocalSemInternet);
-                    return; // Event created, skip other checks for this post on this tick
+            // Determine if the post should be active right now
+            let shouldBeActive = false;
+            if (activationTotalMinutes > deactivationTotalMinutes) { // Overnight schedule
+                if (nowMinutes >= activationTotalMinutes || nowMinutes < deactivationTotalMinutes) {
+                    shouldBeActive = true;
+                }
+            } else { // Same-day schedule
+                if (nowMinutes >= activationTotalMinutes && nowMinutes < deactivationTotalMinutes) {
+                    shouldBeActive = true;
                 }
             }
 
-            // --- Check for missed deactivation ---
-            // This check runs specifically at T = deactivation_time + grace_period.
-            if (nowMinutes === deactivationTotalMinutes + gracePeriodMinutes) {
-                const isStillOnline = lastEvent && (
-                    lastEvent.type === EventType.SystemActivated ||
-                    lastEvent.type === EventType.GatehouseOnline ||
-                    lastEvent.type === EventType.VigilantFailure
+            // Only check for communication loss if the post should be active
+            if (!shouldBeActive) {
+                return;
+            }
+
+            const eventsForPost = events.filter(e => e.postId === post.id);
+
+            // Check if there's a recent "Sem Comunicação" event to avoid duplicates
+            const recentCommLossEvent = eventsForPost.find(e =>
+                e.type === EventType.LocalSemInternet &&
+                (now.getTime() - e.timestamp.getTime()) < 10 * 60 * 1000 // Within last 10 minutes
+            );
+
+            if (recentCommLossEvent) {
+                return; // Already reported communication loss recently
+            }
+
+            // Check if the post has a recent heartbeat
+            if (post.last_heartbeat) {
+                const lastHeartbeatTime = new Date(post.last_heartbeat).getTime();
+                const timeSinceHeartbeat = (now.getTime() - lastHeartbeatTime) / 1000; // in seconds
+
+                // If no heartbeat for more than 2 minutes (120 seconds), consider it offline
+                if (timeSinceHeartbeat > 120) {
+                    console.log(`Post ${post.id} (${post.name}) has no heartbeat for ${Math.floor(timeSinceHeartbeat)}s. Creating 'Sem Comunicação' event.`);
+                    createEvent(post.id, EventType.LocalSemInternet);
+                }
+            } else {
+                // No heartbeat at all - check if there's a recent "Sistema Ativado" event
+                const activationTimeToday = new Date(now);
+                activationTimeToday.setHours(activationHours, activationMinutes, 0, 0);
+
+                const hasActivatedToday = eventsForPost.some(e =>
+                    e.type === EventType.SystemActivated &&
+                    e.timestamp >= activationTimeToday
                 );
 
-                if (isStillOnline) {
-                    console.log(`Post ${post.id} (${post.name}) missed deactivation. Creating 'Local Sem Internet' event.`);
+                // Only create event if we're past the grace period and no activation was detected
+                const minutesSinceActivation = nowMinutes - activationTotalMinutes;
+                if (!hasActivatedToday && minutesSinceActivation >= gracePeriodMinutes) {
+                    console.log(`Post ${post.id} (${post.name}) has no heartbeat and missed activation. Creating 'Sem Comunicação' event.`);
                     createEvent(post.id, EventType.LocalSemInternet);
-                    return; // Event created, skip other checks for this post on this tick
                 }
             }
         });
