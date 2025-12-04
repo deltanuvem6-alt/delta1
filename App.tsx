@@ -1026,10 +1026,34 @@ function App() {
     });
 
     const handleUpdateCompany = async (updatedCompany: Company) => {
+        const originalCompany = companies.find(c => c.id === updatedCompany.id);
+        if (!originalCompany) {
+            console.error("Original company not found for update.");
+            return;
+        }
+
         // Remove id and postCount from the update payload
-        const { id, postCount, ...companyUpdateData } = updatedCompany;
+        // We also want to remove fields that haven't changed to avoid unnecessary unique constraint checks
+        const { id, postCount, ...tempUpdateData } = updatedCompany;
+        const companyUpdateData: any = { ...tempUpdateData };
+
+        if (originalCompany.email === updatedCompany.email) {
+            delete companyUpdateData.email;
+        }
+        if (originalCompany.username === updatedCompany.username) {
+            delete companyUpdateData.username;
+        }
+        if (originalCompany.cnpj === updatedCompany.cnpj) {
+            delete companyUpdateData.cnpj;
+        }
 
         console.log("Updating company:", updatedCompany.id, companyUpdateData);
+
+        // If there are no changes to save, just close the modal
+        if (Object.keys(companyUpdateData).length === 0) {
+            setShowEditCompanyModal(false);
+            return;
+        }
 
         const { data, error } = await supabase
             .from('companies')
@@ -1040,7 +1064,13 @@ function App() {
 
         if (error) {
             console.error("Error updating company:", error.message);
-            alert(`Erro ao atualizar empresa: ${error.message}`);
+            if (error.message.includes('companies_email_key')) {
+                alert('Erro: Este email já está cadastrado em outra empresa.');
+            } else if (error.message.includes('companies_username_key')) {
+                alert('Erro: Este nome de usuário já está em uso.');
+            } else {
+                alert(`Erro ao atualizar empresa: ${error.message}`);
+            }
             return;
         }
 
