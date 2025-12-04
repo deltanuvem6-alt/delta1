@@ -485,6 +485,7 @@ function App() {
                         EventType.SystemActivated,
                         EventType.SystemDeactivated,
                         EventType.PanicButton,
+                        EventType.GatehouseOnline,
                         EventType.GatehouseOffline,
                         EventType.LocalSemInternet,
                         EventType.VigilantFailure // Adicionando falha de vigia também pois é crítico
