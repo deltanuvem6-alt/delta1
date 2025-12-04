@@ -9,6 +9,7 @@ import AlertaVigiaConfigPage from './components/AlertaVigiaConfigPage';
 import { ArrowLeftIcon, ExclamationTriangleIcon } from './components/Icons';
 import { supabase } from './supabaseClient';
 import { sendEmail } from './services/emailService';
+import { sendEventNotification, sendAdminNotification, sendCompanyNotification } from './services/notificationService';
 
 const HEARTBEAT_INTERVAL_MS = 30 * 1000; // 30 seconds
 const HEARTBEAT_THRESHOLD_SECONDS = 45; // 45 seconds tolerance
@@ -470,8 +471,44 @@ function App() {
             });
             return false;
         }
+
+        // Enviar notificação por email para a empresa
+        try {
+            const post = posts.find(p => p.id === postId);
+            if (post) {
+                const company = companies.find(c => c.id === post.companyId);
+                if (company && company.email) {
+                    // Não enviar email para eventos de "Sistema Desativado" se não for crítico, 
+                    // mas o requisito diz "Ativação" e "Desativação", então enviamos.
+                    // Lista de eventos para notificar:
+                    const notifyEvents = [
+                        EventType.SystemActivated,
+                        EventType.SystemDeactivated,
+                        EventType.PanicButton,
+                        EventType.GatehouseOffline,
+                        EventType.LocalSemInternet,
+                        EventType.VigilantFailure // Adicionando falha de vigia também pois é crítico
+                    ];
+
+                    if (notifyEvents.includes(eventType)) {
+                        console.log(`Sending email notification for ${eventType} to ${company.email}`);
+                        // Não aguardar o envio do email para não bloquear a UI
+                        sendEventNotification(
+                            company.email,
+                            company.name,
+                            post.name,
+                            eventType,
+                            new Date()
+                        ).catch(err => console.error("Failed to send email notification:", err));
+                    }
+                }
+            }
+        } catch (emailErr) {
+            console.error("Error preparing email notification:", emailErr);
+        }
+
         return true;
-    }, [isOnline]);
+    }, [isOnline, posts, companies]);
 
     // --- SYSTEM HEALTH CHECK / TICKER ---
     const checkPostStatus = useCallback(() => {
@@ -744,6 +781,15 @@ function App() {
 
         const registeredCompany: Company = { ...data, postCount: data.post_count };
         setCompanies(prev => [...prev, registeredCompany]);
+
+        // Notificar Admin sobre Nova Empresa
+        sendAdminNotification('Nova Empresa Cadastrada', {
+            'Nome da Empresa': registeredCompany.name,
+            'Email': registeredCompany.email,
+            'CNPJ': registeredCompany.cnpj,
+            'Data de Cadastro': new Date().toLocaleDateString('pt-BR')
+        }).catch(err => console.error("Failed to notify admin about new company:", err));
+
         setShowRegisterModal(false);
         setShowRegistrationSuccessModal(true);
         return true;
@@ -788,6 +834,15 @@ function App() {
         setPosts(prev => [newPostForState, ...prev]);
         setCompanies(prev => prev.map(c => c.id === companyId ? { ...c, postCount: c.postCount + 1 } : c));
         setAlertaVigiaConfigs(prev => ({ ...prev, [newPost.id]: { activationTime: newConfig.activation_time, deactivationTime: newConfig.deactivation_time, progressDurationMinutes: newConfig.progress_duration_minutes, alertSoundSeconds: newConfig.alert_sound_seconds } }));
+
+        // Notificar Admin sobre Novo Posto
+        sendAdminNotification('Novo Posto de Serviço Cadastrado', {
+            'Nome do Posto': newPost.name,
+            'Localização': newPost.location,
+            'Empresa Pertencente': company.name,
+            'Data de Cadastro': new Date().toLocaleDateString('pt-BR')
+        }).catch(err => console.error("Failed to notify admin about new post:", err));
+
         setShowAddPostModal(false);
     };
 
@@ -1036,11 +1091,27 @@ function App() {
             if (action === 'delete') {
                 const { error } = await supabase.from('companies').delete().eq('id', company.id);
                 if (error) console.error("Error deleting company", error.message);
-                else setCompanies(prev => prev.filter(c => c.id !== company.id));
+                else {
+                    setCompanies(prev => prev.filter(c => c.id !== company.id));
+                    // Notificar Admin sobre Empresa Excluída
+                    sendAdminNotification('Empresa Excluída', {
+                        'Nome da Empresa': company.name,
+                        'CNPJ': company.cnpj,
+                        'Motivo': 'Exclusão Manual pelo Admin'
+                    }).catch(err => console.error("Failed to notify admin about company deletion:", err));
+                }
             } else if (action === 'block') {
                 const { error } = await supabase.from('companies').update({ blocked: !company.blocked }).eq('id', company.id);
                 if (error) console.error("Error blocking company", error.message);
-                else setCompanies(prev => prev.map(c => c.id === company.id ? { ...c, blocked: !c.blocked } : c));
+                else {
+                    setCompanies(prev => prev.map(c => c.id === company.id ? { ...c, blocked: !c.blocked } : c));
+                    // Notificar Admin sobre Empresa Bloqueada/Desbloqueada
+                    const status = !company.blocked ? 'Bloqueada' : 'Desbloqueada';
+                    sendAdminNotification(`Empresa ${status}`, {
+                        'Nome da Empresa': company.name,
+                        'Novo Status': status
+                    }).catch(err => console.error("Failed to notify admin about company block:", err));
+                }
             }
         } else if (type === 'post') {
             const post = data as ServicePost;
@@ -1055,6 +1126,22 @@ function App() {
                         const newCount = Math.max(0, company.postCount - 1);
                         await supabase.from('companies').update({ post_count: newCount }).eq('id', post.companyId);
                         setCompanies(prev => prev.map(c => c.id === post.companyId ? { ...c, postCount: newCount } : c));
+
+                        // Notificar Admin sobre Posto Excluído
+                        sendAdminNotification('Posto de Serviço Excluído', {
+                            'Nome do Posto': post.name,
+                            'Empresa': company.name,
+                            'Excluído Por': currentUser?.username || 'Desconhecido'
+                        }).catch(err => console.error("Failed to notify admin about post deletion:", err));
+
+                        // Notificar Empresa se ela mesma excluiu (ou se foi o admin, o pedido diz "Quando uma Empresa excluir seu Posto... notifique ela")
+                        // Vou notificar a empresa em ambos os casos para garantir transparência
+                        if (company.email) {
+                            sendCompanyNotification(company.email, 'Posto de Serviço Excluído', {
+                                'Nome do Posto': post.name,
+                                'Data da Exclusão': new Date().toLocaleDateString('pt-BR')
+                            }).catch(err => console.error("Failed to notify company about post deletion:", err));
+                        }
                     }
                 }
             } else if (action === 'block') {
