@@ -53,6 +53,11 @@ if (fs.existsSync(distPath)) {
     console.log('Conteúdo do diretório:', fs.readdirSync(__dirname));
 }
 
+// Rota de Health Check para o Render
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
 // Rota para envio de e-mail
 app.post('/api/send-email', async (req, res) => {
     console.log('📨 Recebida requisição de envio de email');
