@@ -366,51 +366,6 @@ function App() {
                             }
                         }
 
-                        // EMAIL NOTIFICATION: Send email for new events from realtime subscription
-                        try {
-                            console.log(`🔍 [REALTIME] Novo evento recebido via subscription: ${newRecord.type}`);
-
-                            // Fetch full post and company data for email
-                            const { data: fullPostData } = await supabase
-                                .from('service_posts')
-                                .select('*, companies(*)')
-                                .eq('id', newRecord.post_id)
-                                .single();
-
-                            if (fullPostData && fullPostData.companies) {
-                                const company = fullPostData.companies;
-                                console.log(`🔍 [REALTIME] Empresa: ${company.name}, Email: ${company.email}`);
-
-                                if (company.email) {
-                                    const notifyEvents = [
-                                        EventType.SystemActivated,
-                                        EventType.SystemDeactivated,
-                                        EventType.PanicButton,
-                                        EventType.GatehouseOnline,
-                                        EventType.GatehouseOffline,
-                                        EventType.LocalSemInternet,
-                                        EventType.VigilantFailure
-                                    ];
-
-                                    const eventType = newRecord.type as EventType;
-                                    console.log(`🔍 [REALTIME] Evento ${eventType} requer notificação?`, notifyEvents.includes(eventType));
-
-                                    if (notifyEvents.includes(eventType)) {
-                                        console.log(`📧 [REALTIME TRIGGER] Enviando email para ${company.email}`);
-                                        sendEventNotification(
-                                            company.email,
-                                            company.name,
-                                            fullPostData.name,
-                                            eventType,
-                                            new Date(newRecord.timestamp)
-                                        ).catch(err => console.error("❌ [REALTIME EMAIL ERROR]:", err));
-                                    }
-                                }
-                            }
-                        } catch (emailErr) {
-                            console.error("❌ [REALTIME EMAIL ERROR] Error sending email from subscription:", emailErr);
-                        }
-
                     } else if (payload.eventType === 'UPDATE') {
                         const updatedRecord = payload.new as any;
                         setEvents(prev =>
@@ -503,9 +458,11 @@ function App() {
             return true;
         }
 
-        const { error } = await supabase
+        const { data: newEventData, error } = await supabase
             .from('monitoring_events')
-            .insert([{ post_id: postId, type: eventType, status: EventStatus.Unresolved }]);
+            .insert([{ post_id: postId, type: eventType, status: EventStatus.Unresolved }])
+            .select()
+            .single();
 
         if (error) {
             console.error(`Failed to create ${eventType} event`, error.message);
@@ -517,9 +474,49 @@ function App() {
             return false;
         }
 
-        // Email notification is handled by the realtime subscription
-        // to avoid duplication and ensure all events (local and remote) are processed consistently
-        console.log(`✅ Evento ${eventType} criado. Email será enviado via subscription do Supabase.`);
+        // EMAIL NOTIFICATION: Send email only from the client that created the event
+        try {
+            console.log(`🔍 [CREATE EVENT] Novo evento criado: ${eventType}`);
+
+            // Fetch full post and company data for email
+            const { data: fullPostData } = await supabase
+                .from('service_posts')
+                .select('*, companies(*)')
+                .eq('id', postId)
+                .single();
+
+            if (fullPostData && fullPostData.companies) {
+                const company = fullPostData.companies;
+                console.log(`🔍 [CREATE EVENT] Empresa: ${company.name}, Email: ${company.email}`);
+
+                if (company.email) {
+                    const notifyEvents = [
+                        EventType.SystemActivated,
+                        EventType.SystemDeactivated,
+                        EventType.PanicButton,
+                        EventType.GatehouseOnline,
+                        EventType.GatehouseOffline,
+                        EventType.LocalSemInternet,
+                        EventType.VigilantFailure
+                    ];
+
+                    console.log(`🔍 [CREATE EVENT] Evento ${eventType} requer notificação?`, notifyEvents.includes(eventType));
+
+                    if (notifyEvents.includes(eventType)) {
+                        console.log(`📧 [CREATE EVENT TRIGGER] Enviando email para ${company.email}`);
+                        sendEventNotification(
+                            company.email,
+                            company.name,
+                            fullPostData.name,
+                            eventType,
+                            new Date(newEventData.timestamp)
+                        ).catch(err => console.error("❌ [CREATE EVENT EMAIL ERROR]:", err));
+                    }
+                }
+            }
+        } catch (emailErr) {
+            console.error("❌ [CREATE EVENT EMAIL ERROR] Error sending email:", emailErr);
+        }
 
         return true;
     }, [isOnline]);
