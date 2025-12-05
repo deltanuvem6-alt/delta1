@@ -388,6 +388,34 @@ function App() {
         };
     }, []);
 
+    // Real-time subscription for service_posts (heartbeat updates)
+    useEffect(() => {
+        const channel = supabase
+            .channel('service_posts_heartbeat')
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'service_posts' },
+                async (payload) => {
+                    const updatedPost = payload.new as any;
+                    console.log(`[REALTIME] Post ${updatedPost.id} heartbeat updated:`, updatedPost.last_heartbeat);
+
+                    // Update the local posts state with the new heartbeat
+                    setPosts(prev =>
+                        prev.map(post =>
+                            post.id === updatedPost.id
+                                ? { ...post, last_heartbeat: updatedPost.last_heartbeat }
+                                : post
+                        )
+                    );
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
     // Effect for handling page close/hide to log 'Portaria Offline' event
     useEffect(() => {
         const handlePageHide = () => {
@@ -535,6 +563,7 @@ function App() {
             const config = alertaVigiaConfigs[post.id];
             // Don't check the post currently being monitored on this screen
             if (!config || post.id === activeVigiaPost?.id) {
+                console.log(`[HEARTBEAT CHECK] Skipping post ${post.id} (${post.name}): ${!config ? 'No config' : 'Currently active'}`);
                 return;
             }
 
@@ -561,18 +590,20 @@ function App() {
 
             // Only check for communication loss if the post should be active
             if (!shouldBeActive) {
+                console.log(`[HEARTBEAT CHECK] Skipping post ${post.id} (${post.name}): Outside active hours`);
                 return;
             }
 
             const eventsForPost = events.filter(e => e.postId === post.id);
 
-            // Check if there's a recent "Sem Comunicação" event to avoid duplicates
+            // Check if there's a recent \"Sem Comunicação\" event to avoid duplicates
             const recentCommLossEvent = eventsForPost.find(e =>
                 e.type === EventType.LocalSemInternet &&
                 (now.getTime() - e.timestamp.getTime()) < 10 * 60 * 1000 // Within last 10 minutes
             );
 
             if (recentCommLossEvent) {
+                console.log(`[HEARTBEAT CHECK] Skipping post ${post.id} (${post.name}): Recent 'Sem Comunicação' event exists`);
                 return; // Already reported communication loss recently
             }
 
@@ -584,6 +615,7 @@ function App() {
 
             // If recently activated, don't check for communication loss yet (give time for heartbeat to establish)
             if (recentActivationEvent) {
+                console.log(`[HEARTBEAT CHECK] Skipping post ${post.id} (${post.name}): Recent activation event (${recentActivationEvent.type})`);
                 return;
             }
 
@@ -592,16 +624,28 @@ function App() {
                 const lastHeartbeatTime = new Date(post.last_heartbeat).getTime();
                 const timeSinceHeartbeat = (now.getTime() - lastHeartbeatTime) / 1000; // in seconds
 
-                console.log(`[HEARTBEAT CHECK] Post ${post.id} (${post.name}): Last heartbeat ${Math.floor(timeSinceHeartbeat)}s ago`);
+                console.log(`[HEARTBEAT CHECK] Post ${post.id} (${post.name}): Last heartbeat ${Math.floor(timeSinceHeartbeat)}s ago (Threshold: 300s)`);
 
                 // If no heartbeat for more than 5 minutes (300 seconds), consider it offline
                 // Increased from 2 minutes to account for mobile browser background behavior
                 if (timeSinceHeartbeat > 300) {
-                    console.log(`Post ${post.id} (${post.name}) has no heartbeat for ${Math.floor(timeSinceHeartbeat)}s. Creating 'Sem Comunicação' event.`);
+                    // Additional check: verify if there's a "Portaria Online" event in the last 10 minutes
+                    // This prevents false positives when the system just came online
+                    const recentOnlineEvent = eventsForPost.find(e =>
+                        e.type === EventType.GatehouseOnline &&
+                        (now.getTime() - e.timestamp.getTime()) < 10 * 60 * 1000
+                    );
+
+                    if (recentOnlineEvent) {
+                        console.log(`[HEARTBEAT CHECK] ⚠️ Post ${post.id} (${post.name}): Heartbeat stale but recent 'Portaria Online' event exists - waiting...`);
+                        return;
+                    }
+
+                    console.log(`[HEARTBEAT CHECK] ❌ Post ${post.id} (${post.name}) has no heartbeat for ${Math.floor(timeSinceHeartbeat)}s. Creating 'Sem Comunicação' event.`);
                     createEvent(post.id, EventType.LocalSemInternet);
                 }
             } else {
-                // No heartbeat at all - check if there's a "Sistema Ativado" event today
+                // No heartbeat at all - check if there's a \"Sistema Ativado\" event today
                 const activationTimeToday = new Date(now);
                 activationTimeToday.setHours(activationHours, activationMinutes, 0, 0);
 
@@ -613,8 +657,10 @@ function App() {
                 // Only create event if we're past the grace period and no activation was detected
                 const minutesSinceActivation = nowMinutes - activationTotalMinutes;
                 if (!hasActivatedToday && minutesSinceActivation >= gracePeriodMinutes) {
-                    console.log(`Post ${post.id} (${post.name}) has no heartbeat and missed activation. Creating 'Sem Comunicação' event.`);
+                    console.log(`[HEARTBEAT CHECK] ❌ Post ${post.id} (${post.name}) has no heartbeat and missed activation. Creating 'Sem Comunicação' event.`);
                     createEvent(post.id, EventType.LocalSemInternet);
+                } else {
+                    console.log(`[HEARTBEAT CHECK] Post ${post.id} (${post.name}): No heartbeat but within grace period or has activation event`);
                 }
             }
         });
