@@ -422,12 +422,15 @@ function App() {
         }
 
         const heartbeat = async () => {
+            console.log(`[HEARTBEAT] Sending heartbeat for post ${activeVigiaPost.id} at ${new Date().toLocaleTimeString('pt-BR')}`);
             const { error } = await supabase
                 .from('service_posts')
                 .update({ last_heartbeat: new Date().toISOString() })
                 .eq('id', activeVigiaPost.id);
             if (error) {
-                console.error("Heartbeat failed:", error.message);
+                console.error("[HEARTBEAT] Failed:", error.message);
+            } else {
+                console.log(`[HEARTBEAT] Success for post ${activeVigiaPost.id}`);
             }
         };
 
@@ -589,8 +592,11 @@ function App() {
                 const lastHeartbeatTime = new Date(post.last_heartbeat).getTime();
                 const timeSinceHeartbeat = (now.getTime() - lastHeartbeatTime) / 1000; // in seconds
 
-                // If no heartbeat for more than 2 minutes (120 seconds), consider it offline
-                if (timeSinceHeartbeat > 120) {
+                console.log(`[HEARTBEAT CHECK] Post ${post.id} (${post.name}): Last heartbeat ${Math.floor(timeSinceHeartbeat)}s ago`);
+
+                // If no heartbeat for more than 5 minutes (300 seconds), consider it offline
+                // Increased from 2 minutes to account for mobile browser background behavior
+                if (timeSinceHeartbeat > 300) {
                     console.log(`Post ${post.id} (${post.name}) has no heartbeat for ${Math.floor(timeSinceHeartbeat)}s. Creating 'Sem Comunicação' event.`);
                     createEvent(post.id, EventType.LocalSemInternet);
                 }
