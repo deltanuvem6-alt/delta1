@@ -596,10 +596,10 @@ function App() {
 
             const eventsForPost = events.filter(e => e.postId === post.id);
 
-            // Evitar duplicidade de alertas recentes (debounce de 20 min)
+            // Evitar duplicidade de alertas recentes (debounce de 1 min para testes)
             const recentCommLossEvent = eventsForPost.find(e =>
                 e.type === EventType.LocalSemInternet &&
-                (now.getTime() - e.timestamp.getTime()) < 20 * 60 * 1000
+                (now.getTime() - e.timestamp.getTime()) < 1 * 60 * 1000
             );
 
             if (recentCommLossEvent) {
