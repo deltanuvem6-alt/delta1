@@ -576,7 +576,7 @@ function App() {
             const [deactivationHours, deactivationMinutes] = config.deactivationTime.split(':').map(Number);
             const deactivationTotalMinutes = deactivationHours * 60 + deactivationMinutes;
 
-            // Determinar se deveria estar ativo agora
+            // Determinar se deveria estar ativo agora (Configuração de Horário)
             let shouldBeActive = false;
             // Configuração Overnight (Ex: 22:00 as 06:00)
             if (activationTotalMinutes > deactivationTotalMinutes) {
@@ -589,8 +589,18 @@ function App() {
                 }
             }
 
-            // Se não deveria estar ativo, ignora
-            if (!shouldBeActive) {
+            // NOVA REGRA: Se o posto enviou heartbeat na última hora, consideramos que ele ESTÁ operando,
+            // independente do horário configurado. Isso permite testes fora de hora e monitora horas extras.
+            let recentlyActive = false;
+            if (post.last_heartbeat) {
+                const lastHb = new Date(post.last_heartbeat).getTime();
+                if ((now.getTime() - lastHb) < 60 * 60 * 1000) { // 60 minutos
+                    recentlyActive = true;
+                }
+            }
+
+            // Se não deveria estar ativo E não teve atividade recente, ignora.
+            if (!shouldBeActive && !recentlyActive) {
                 return;
             }
 
