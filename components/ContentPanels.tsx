@@ -12,6 +12,7 @@ import {
     MailIcon
 } from './Icons';
 import { Modal } from './Modals';
+import { supabase } from '../supabaseClient';
 
 // A simple reusable card component for KPIs
 const KpiCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
@@ -172,8 +173,8 @@ export const DashboardContent: React.FC<{
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1.5 w-fit ${company.blocked
-                                                ? 'bg-red-600/50 text-red-200'
-                                                : 'bg-green-600/50 text-green-200'
+                                            ? 'bg-red-600/50 text-red-200'
+                                            : 'bg-green-600/50 text-green-200'
                                             }`}>
                                             <span className={`h-2 w-2 rounded-full ${company.blocked ? 'bg-red-400' : 'bg-green-400'}`}></span>
                                             {company.blocked ? 'Bloqueado' : 'Ativo'}
@@ -636,15 +637,70 @@ export const AlertaVigiaActiveScreen: React.FC<{
             return;
         }
 
-        if (!prevIsActive && isActive) {
-            onCreateSystemEvent(post.id, EventType.SystemActivated);
-        }
-        else if (prevIsActive && !isActive) {
-            onCreateSystemEvent(post.id, EventType.SystemDeactivated);
-        }
+        // Função assíncrona para verificar e criar eventos
+        const handleActivationChange = async () => {
+            if (!prevIsActive && isActive) {
+                // PROTEÇÃO ANTI-DUPLICAÇÃO: Verificar se já existe evento "Sistema Ativado" recente
+                // Calcula janela de tempo: últimos 30 minutos a partir do horário de ativação programado
+                const [activationHours, activationMinutes] = config.activationTime.split(':').map(Number);
+                const now = new Date();
+
+                // Cria referência do horário de ativação programado para hoje
+                const activationRef = new Date(now);
+                activationRef.setHours(activationHours, activationMinutes, 0, 0);
+
+                // Se já passou do horário de ativação, considera o horário de hoje
+                // Se ainda não chegou, considera o horário de ontem (caso overnight)
+                if (now.getHours() * 60 + now.getMinutes() < activationHours * 60 + activationMinutes) {
+                    // Ainda não chegou no horário de ativação de hoje, pode ser turno overnight de ontem
+                    activationRef.setDate(activationRef.getDate() - 1);
+                }
+
+                // Define janela de busca: 30 minutos antes do horário de ativação até agora
+                const searchWindowStart = new Date(activationRef.getTime() - 30 * 60 * 1000); // 30 min antes
+
+                console.log(`[ANTI-DUP] Verificando eventos "Sistema Ativado" para posto ${post.id} desde ${searchWindowStart.toLocaleString('pt-BR')}`);
+
+                // Busca no banco se já existe evento "Sistema Ativado" nesta janela de tempo
+                const { data: recentEvents, error } = await supabase
+                    .from('monitoring_events')
+                    .select('id, timestamp, type')
+                    .eq('post_id', post.id)
+                    .eq('type', EventType.SystemActivated)
+                    .gte('timestamp', searchWindowStart.toISOString())
+                    .order('timestamp', { ascending: false })
+                    .limit(1);
+
+                if (error) {
+                    console.error('[ANTI-DUP] Erro ao verificar eventos recentes:', error.message);
+                    // Em caso de erro, cria o evento mesmo assim (fail-safe)
+                    onCreateSystemEvent(post.id, EventType.SystemActivated);
+                    return;
+                }
+
+                if (recentEvents && recentEvents.length > 0) {
+                    const lastEvent = recentEvents[0];
+                    const lastEventTime = new Date(lastEvent.timestamp);
+                    console.log(`[ANTI-DUP] ⚠️ Evento "Sistema Ativado" JÁ EXISTE para posto ${post.id} às ${lastEventTime.toLocaleString('pt-BR')}. Bloqueando duplicação.`);
+                    // NÃO cria evento duplicado
+                    return;
+                }
+
+                // Não existe evento recente, pode criar
+                console.log(`[ANTI-DUP] ✅ Nenhum evento "Sistema Ativado" recente encontrado. Criando novo evento para posto ${post.id}.`);
+                onCreateSystemEvent(post.id, EventType.SystemActivated);
+            }
+            else if (prevIsActive && !isActive) {
+                // Para desativação, mantém comportamento normal (sem verificação)
+                onCreateSystemEvent(post.id, EventType.SystemDeactivated);
+            }
+        };
+
+        // Executa a função assíncrona
+        handleActivationChange();
 
         prevIsActiveRef.current = isActive;
-    }, [isActive, post.id, onCreateSystemEvent]);
+    }, [isActive, post.id, onCreateSystemEvent, config.activationTime]);
 
     // Timer for the progress countdown, only runs when system is active
     useEffect(() => {
@@ -867,10 +923,10 @@ const CalendarDatePicker: React.FC<{
                 <button
                     onClick={() => onDateChange(dateStr)}
                     className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors text-sm font-medium ${isSelected
-                            ? 'bg-blue-600 text-white font-bold ring-2 ring-offset-2 ring-offset-slate-800 ring-blue-500'
-                            : isToday
-                                ? 'bg-slate-700 text-white'
-                                : 'text-slate-200 hover:bg-slate-700/50'
+                        ? 'bg-blue-600 text-white font-bold ring-2 ring-offset-2 ring-offset-slate-800 ring-blue-500'
+                        : isToday
+                            ? 'bg-slate-700 text-white'
+                            : 'text-slate-200 hover:bg-slate-700/50'
                         }`}
                 >
                     {day}
