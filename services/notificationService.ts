@@ -1,7 +1,8 @@
 import { sendEmail } from './emailService';
+import { supabase } from '../supabaseClient';
 
-// Email do Admin para notificações administrativas
-const ADMIN_EMAIL = 'deltanuvem1@gmail.com';
+// O Admin é sempre a empresa com ID 1 no banco de dados
+const ADMIN_COMPANY_ID = 1;
 
 const generateEmailHtml = (title: string, details: Record<string, string>, footerNote?: string) => {
     const detailsHtml = Object.entries(details).map(([key, value]) => `
@@ -113,8 +114,33 @@ export const sendEventNotification = async (
 };
 
 export const sendAdminNotification = async (subject: string, details: Record<string, string>) => {
-    const html = generateEmailHtml(subject, details);
-    await sendEmail(ADMIN_EMAIL, `DeltaNuvem - ${subject}`, html);
+    try {
+        // Busca o email da empresa com ID 1 (Admin)
+        const { data: adminCompany, error } = await supabase
+            .from('companies')
+            .select('email, name')
+            .eq('id', ADMIN_COMPANY_ID)
+            .single();
+
+        if (error) {
+            console.error(`❌ [EMAIL] Erro ao buscar empresa admin (ID ${ADMIN_COMPANY_ID}):`, error.message);
+            return;
+        }
+
+        if (!adminCompany || !adminCompany.email) {
+            console.error(`❌ [EMAIL] Empresa admin (ID ${ADMIN_COMPANY_ID}) não encontrada ou sem email cadastrado.`);
+            return;
+        }
+
+        console.log(`📧 [EMAIL] Enviando notificação admin para: ${adminCompany.email} (${adminCompany.name})`);
+
+        const html = generateEmailHtml(subject, details);
+        await sendEmail(adminCompany.email, `DeltaNuvem - ${subject}`, html);
+
+        console.log(`✅ [EMAIL] Notificação admin enviada com sucesso para ${adminCompany.email}`);
+    } catch (error) {
+        console.error(`❌ [EMAIL] Falha ao enviar notificação admin:`, error);
+    }
 };
 
 export const sendCompanyNotification = async (companyEmail: string, subject: string, details: Record<string, string>) => {
