@@ -13,6 +13,7 @@ import {
 } from './Icons';
 import { Modal } from './Modals';
 import { supabase } from '../supabaseClient';
+import { Device } from '@capacitor/device';
 
 // A simple reusable card component for KPIs
 const KpiCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
@@ -701,6 +702,51 @@ export const AlertaVigiaActiveScreen: React.FC<{
 
         prevIsActiveRef.current = isActive;
     }, [isActive, post.id, onCreateSystemEvent, config.activationTime]);
+
+    // Effect to monitor battery/power status
+    useEffect(() => {
+        let isMounted = true;
+        let lastChargingState: boolean | null = null;
+
+        const setupBatteryMonitoring = async () => {
+            try {
+                // Get initial state
+                const info = await Device.getBatteryInfo();
+                if (!isMounted) return;
+
+                lastChargingState = info.isCharging || false;
+                console.log(`[POWER] Status inicial da bateria: ${lastChargingState ? 'Carregando' : 'Desconectado'}`);
+
+                // Setup listener
+                await Device.addListener('batteryStatusChange', (status) => {
+                    if (!isMounted) return;
+
+                    const isCharging = status.isCharging || false;
+
+                    if (lastChargingState !== isCharging) {
+                        console.log(`[POWER] Mudança de status detectada: ${isCharging ? 'Conectou' : 'Desconectou'}`);
+
+                        if (isCharging) {
+                            onCreateSystemEvent(post.id, EventType.PowerConnected);
+                        } else {
+                            onCreateSystemEvent(post.id, EventType.PowerDisconnected);
+                        }
+
+                        lastChargingState = isCharging;
+                    }
+                });
+            } catch (error) {
+                console.error('[POWER] Erro ao configurar monitoramento de bateria:', error);
+            }
+        };
+
+        setupBatteryMonitoring();
+
+        return () => {
+            isMounted = false;
+            Device.removeAllListeners();
+        };
+    }, [post.id, onCreateSystemEvent]);
 
     // Timer for the progress countdown, only runs when system is active
     useEffect(() => {

@@ -40,6 +40,8 @@ export enum EventType {
   SystemActivated = 'Sistema Ativado',
   SystemDeactivated = 'Sistema Desativado',
   LocalSemInternet = 'Sem Comunicação',
+  PowerConnected = 'Fonte Conectada',
+  PowerDisconnected = 'Fonte Desconectada',
 }
 
 export enum EventStatus {

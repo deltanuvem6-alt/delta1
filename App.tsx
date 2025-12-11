@@ -570,7 +570,9 @@ function App() {
                         EventType.GatehouseOnline,
                         EventType.GatehouseOffline,
                         EventType.LocalSemInternet,
-                        EventType.VigilantFailure
+                        EventType.VigilantFailure,
+                        EventType.PowerConnected,
+                        EventType.PowerDisconnected
                     ];
 
                     console.log(`🔍 [CREATE EVENT] Evento ${eventType} requer notificação?`, notifyEvents.includes(eventType));
