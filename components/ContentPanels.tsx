@@ -9,7 +9,8 @@ import {
     MonitorIcon,
     FileTextIcon,
     UploadCloud,
-    MailIcon
+    MailIcon,
+    ZapIcon
 } from './Icons';
 import { Modal } from './Modals';
 import { supabase } from '../supabaseClient';
@@ -557,6 +558,7 @@ export const AlertaVigiaActiveScreen: React.FC<{
     const [isActive, setIsActive] = useState(false);
     const progressDurationSeconds = config.progressDurationMinutes * 60;
     const [remainingTime, setRemainingTime] = useState(progressDurationSeconds);
+    const [isCharging, setIsCharging] = useState<boolean | null>(null); // State for visual indicator
     const prevIsActiveRef = useRef<boolean>();
     const audioRef = useRef<HTMLAudioElement>(null);
     const DEFAULT_SOUND_URL = 'https://hrubgwggnnxyqeomhhyc.supabase.co/storage/v1/object/public/sons_alerta/Alarme.mp3';
@@ -704,49 +706,92 @@ export const AlertaVigiaActiveScreen: React.FC<{
     }, [isActive, post.id, onCreateSystemEvent, config.activationTime]);
 
     // Effect to monitor battery/power status
+    // Effect to monitor battery/power status (ROBUST: Listener + Polling)
+    // STABLE CALLBACKS: Avoid useEffect re-runs when network status changes (isOnline)
+    const onCreateSystemEventRef = useRef(onCreateSystemEvent);
+    useEffect(() => {
+        onCreateSystemEventRef.current = onCreateSystemEvent;
+    }, [onCreateSystemEvent]);
+
+    const postIdRef = useRef(post.id);
+    useEffect(() => {
+        postIdRef.current = post.id;
+    }, [post.id]);
+
+    // Effect to monitor battery/power status (ROBUST: Listener + Polling)
     useEffect(() => {
         let isMounted = true;
-        let lastChargingState: boolean | null = null;
+        let lastKnownState: boolean | null = null;
+        let pollingInterval: any = null;
+
+        const handleBatteryChange = (isCharging: boolean) => {
+            if (!isMounted) return;
+
+            // Update visual state
+            setIsCharging(isCharging);
+
+            // LOGIC: Only trigger event if state CHANGED from what we last knew
+            if (lastKnownState !== null && lastKnownState !== isCharging) {
+                console.log(`[POWER] Mudança confirmada: ${isCharging ? 'Conectou' : 'Desconectou'}`);
+
+                // Use Ref current value to call event without restarting effect
+                if (isCharging) {
+                    onCreateSystemEventRef.current(postIdRef.current, EventType.PowerConnected);
+                } else {
+                    onCreateSystemEventRef.current(postIdRef.current, EventType.PowerDisconnected);
+                }
+            }
+            lastKnownState = isCharging;
+        };
 
         const setupBatteryMonitoring = async () => {
             try {
-                // Get initial state
+                // 1. Initial Check
                 const info = await Device.getBatteryInfo();
-                if (!isMounted) return;
+                if (isMounted) {
+                    console.log(`[POWER] Inicial: ${info.isCharging ? 'Carregando' : 'Bateria'}`);
+                    lastKnownState = info.isCharging || false;
+                    setIsCharging(info.isCharging || false);
+                }
 
-                lastChargingState = info.isCharging || false;
-                console.log(`[POWER] Status inicial da bateria: ${lastChargingState ? 'Carregando' : 'Desconectado'}`);
-
-                // Setup listener
-                await Device.addListener('batteryStatusChange', (status) => {
-                    if (!isMounted) return;
-
-                    const isCharging = status.isCharging || false;
-
-                    if (lastChargingState !== isCharging) {
-                        console.log(`[POWER] Mudança de status detectada: ${isCharging ? 'Conectou' : 'Desconectou'}`);
-
-                        if (isCharging) {
-                            onCreateSystemEvent(post.id, EventType.PowerConnected);
-                        } else {
-                            onCreateSystemEvent(post.id, EventType.PowerDisconnected);
-                        }
-
-                        lastChargingState = isCharging;
-                    }
+                // 2. Listener (Realtime)
+                await (Device as any).addListener('batteryStatusChange', (status: any) => {
+                    console.log(`[POWER LISTENER] Evento recebido: ${status.isCharging}`);
+                    handleBatteryChange(status.isCharging || false);
                 });
+
             } catch (error) {
-                console.error('[POWER] Erro ao configurar monitoramento de bateria:', error);
+                console.error('[POWER] Erro no setup:', error);
             }
         };
 
         setupBatteryMonitoring();
 
+        // 3. Polling (Backup a cada 10s sem resetar o listener)
+        pollingInterval = setInterval(async () => {
+            if (!isMounted) return;
+            try {
+                const info = await Device.getBatteryInfo();
+                const currentCharging = info.isCharging || false;
+
+                // If distinct from internal state, force update
+                if (lastKnownState !== currentCharging) {
+                    console.log(`[POWER POLLING] Detectou mudança perdida pelo listener!`);
+                    handleBatteryChange(currentCharging);
+                }
+            } catch (err) {
+                console.error('[POWER POLLING] Erro:', err);
+            }
+        }, 10000);
+
         return () => {
             isMounted = false;
-            Device.removeAllListeners();
+            if (pollingInterval) clearInterval(pollingInterval);
+            (Device as any).removeAllListeners();
         };
-    }, [post.id, onCreateSystemEvent]);
+        // DEPENDENCY ARRAY IS EMPTY (once per mount) or very stable.
+        // We use Refs for dynamic data.
+    }, []); // <--- EMPTY ARRAY: Runs once on mount, never tears down listeners!
 
     // Timer for the progress countdown, only runs when system is active
     useEffect(() => {
@@ -802,6 +847,19 @@ export const AlertaVigiaActiveScreen: React.FC<{
                     <h1 className="text-2xl sm:text-3xl font-bold">Alerta Vigia</h1>
                     <p className="text-gray-400">Sistema de Monitoramento</p>
                 </header>
+
+                {/* Power Status Indicator (Top Left) */}
+                <div className={`absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-md border transition-colors ${isCharging === true
+                    ? 'bg-green-900/40 border-green-500/50 text-green-400'
+                    : isCharging === false
+                        ? 'bg-red-900/40 border-red-500/50 text-red-400'
+                        : 'bg-gray-800/40 border-gray-600/50 text-gray-400'
+                    }`}>
+                    <ZapIcon className={`w-4 h-4 ${isCharging ? 'fill-current' : ''}`} />
+                    <span className="text-xs font-bold uppercase">
+                        {isCharging === true ? 'Energia' : isCharging === false ? 'Bateria' : '...'}
+                    </span>
+                </div>
 
                 {/* Main Card */}
                 <main className="bg-[#2b3749] rounded-3xl p-4 space-y-3">

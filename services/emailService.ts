@@ -4,7 +4,11 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
         // Mas em produção (Render), o mesmo servidor serve ambos, então '/api/send-email' funciona.
         // Para dev local, recomenda-se configurar o proxy no vite.config.ts ou rodar o server.js.
 
-        const response = await fetch('/api/send-email', {
+        // Quando rodando via Capacitor (Android/iOS) ou localmente fora do proxy, usamos a URL absoluta.
+        // O servidor Express no Render deve ter CORS habilitado (app.use(cors())).
+        const API_URL = 'https://deltanuvem-5jun.onrender.com/api/send-email';
+
+        const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
