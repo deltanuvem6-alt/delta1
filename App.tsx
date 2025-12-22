@@ -95,6 +95,30 @@ function App() {
 
         if (companiesError) {
             console.error('Error fetching data from Supabase:', companiesError.message);
+            // TENTATIVA DE RECUPERAÇÃO VIA CACHE (OFFLINE MODE)
+            const cachedCompanies = localStorage.getItem('app_cache_companies');
+            const cachedPosts = localStorage.getItem('app_cache_posts');
+            const cachedConfigs = localStorage.getItem('app_cache_configs');
+
+            if (cachedCompanies && cachedPosts) {
+                console.log("OFFLINE MODE: Recovering data from local cache.");
+                setCompanies(JSON.parse(cachedCompanies));
+                setPosts(JSON.parse(cachedPosts));
+                if (cachedConfigs) setAlertaVigiaConfigs(JSON.parse(cachedConfigs));
+
+                setLoading(false);
+                setIsOnline(false); // Assume offline se falhou
+
+                // Aviso não obstrutivo
+                setInfoModal({
+                    isOpen: true,
+                    title: 'Modo Offline',
+                    message: 'Não foi possível conectar ao servidor. O aplicativo está rodando com dados salvos localmente.',
+                    autoCloseDelay: 5000
+                });
+                return; // Sai da função com dados carregados do cache
+            }
+
             const errorMessage = companiesError.message.toLowerCase();
 
             if (errorMessage.includes('does not exist') || errorMessage.includes('could not find the table')) {
@@ -104,7 +128,7 @@ function App() {
                 setFetchError("Falha ao carregar dados devido às Políticas de Segurança (RLS). Verifique no Supabase se a role 'anon' tem permissão de leitura (SELECT) para a tabela 'companies'.");
             }
             else {
-                setFetchError(`Ocorreu um erro inesperado: ${companiesError.message}`);
+                setFetchError(`Não foi possível conectar ao servidor. Verifique sua conexão com a internet. (Erro: ${companiesError.message})`);
             }
             setLoading(false);
             return;
@@ -129,7 +153,24 @@ function App() {
             Object.entries(fetchErrors).forEach(([key, error]) => {
                 if (error) console.error(`Error fetching ${key}:`, error.message);
             });
-            setFetchError("Ocorreu um erro ao buscar dados adicionais (postos, eventos, etc). Verifique se todas as tabelas foram criadas corretamente pelo script SQL.");
+
+            // TENTATIVA DE RECUPERAÇÃO VIA CACHE (PARCIAL)
+            const cachedPosts = localStorage.getItem('app_cache_posts');
+            if (cachedPosts) {
+                console.log("OFFLINE MODE: Recovering posts from cache after partial failure.");
+                setPosts(JSON.parse(cachedPosts));
+                // Companies já foram setadas antes
+                setLoading(false);
+                setInfoModal({
+                    isOpen: true,
+                    title: 'Atenção',
+                    message: 'Houve falha ao atualizar alguns dados, mas o app funcionará com dados locais.',
+                    autoCloseDelay: 4000
+                });
+                return;
+            }
+
+            setFetchError("Ocorreu um erro ao buscar dados adicionais. Verifique sua conexão com a internet.");
             setLoading(false);
             return;
         }
@@ -177,6 +218,19 @@ function App() {
 
         setLoading(false);
     }, []);
+
+    // --- CACHE PERSISTENCE (OFFLINE SUPPORT) ---
+    useEffect(() => {
+        if (companies.length > 0 && isOnline) localStorage.setItem('app_cache_companies', JSON.stringify(companies));
+    }, [companies, isOnline]);
+
+    useEffect(() => {
+        if (posts.length > 0 && isOnline) localStorage.setItem('app_cache_posts', JSON.stringify(posts));
+    }, [posts, isOnline]);
+
+    useEffect(() => {
+        if (Object.keys(alertaVigiaConfigs).length > 0 && isOnline) localStorage.setItem('app_cache_configs', JSON.stringify(alertaVigiaConfigs));
+    }, [alertaVigiaConfigs, isOnline]);
 
     // --- OFFLINE FUNCTIONALITY ---
     const processOfflineQueue = useCallback(async () => {
@@ -1055,6 +1109,22 @@ function App() {
         const postId = parseInt(postIdStr.trim(), 10);
         if (isNaN(postId)) return 'ID do Posto inválido. Use apenas números.';
 
+        // LÓGICA DE LOGIN OFFLINE
+        if (!isOnline) {
+            const localPost = posts.find(p => p.id === postId);
+            if (!localPost) return 'Sem conexão. Posto não encontrado nos dados locais.';
+
+            // Verifica senha localmente
+            if (localPost.password !== password.trim()) return 'Senha incorreta (Validação Offline).';
+            if (localPost.blocked) return 'Este posto está bloqueado.';
+
+            // Login Offline com sucesso
+            await createEvent(localPost.id, EventType.GatehouseOnline);
+            setActiveVigiaPost(localPost);
+            setDemoMode(false);
+            return true;
+        }
+
         const { data: post, error } = await supabase
             .from('service_posts')
             .select('*, companies(logo, name)')
@@ -1431,12 +1501,18 @@ function App() {
                 <div className="fixed inset-0 bg-gray-900 flex items-center justify-center text-white p-8">
                     <div className="text-center max-w-lg bg-gray-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-8">
                         <ExclamationTriangleIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                        <h2 className="text-2xl font-bold text-red-400 mb-4">Erro de Conexão com o Banco de Dados</h2>
+                        <h2 className="text-2xl font-bold text-red-400 mb-4">Falha de Conexão</h2>
                         <p className="text-md text-gray-300 mb-6">{fetchError}</p>
                         <p className="text-sm text-gray-400">
-                            A causa mais comum para este erro é a falta das tabelas no Supabase ou uma política de segurança (RLS) restritiva.
-                            Por favor, vá para <code className="bg-gray-700 p-1 rounded">SQL Editor</code> para executar o script de criação das tabelas e verifique as <code className="bg-gray-700 p-1 rounded">Policies</code> do seu banco de dados.
+                            Não foi possível carregar os dados necessários para iniciar o aplicativo.
+                            Verifique se o dispositivo está conectado à internet e tente reiniciar o app.
                         </p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+                        >
+                            Tentar Novamente
+                        </button>
                     </div>
                 </div>
             );

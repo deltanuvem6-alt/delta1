@@ -10,7 +10,8 @@ const urlsToCache = [
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', // Adicionado para PDF offline
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js' // Adicionado para PDF offline
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js', // Adicionado para PDF offline
+  'https://hrubgwggnnxyqeomhhyc.supabase.co/storage/v1/object/public/sons_alerta/Alarme.mp3' // SOM DE ALERTA CRÍTICO
 ];
 
 // Evento de Instalação: Cacheia os arquivos principais do app
@@ -20,6 +21,7 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Cache aberto e arquivos principais sendo cacheados.');
+        // Adiciona um por um para garantir que falhas parciais não quebrem todo o cache, ou use addAll se preferir atomicidade
         return cache.addAll(urlsToCache);
       })
       .catch(err => console.error('Falha ao adicionar arquivos ao cache:', err))
@@ -52,11 +54,19 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') {
     return;
   }
-  
-  // Para chamadas à API do Supabase, sempre use a rede para obter dados atualizados.
+
+  // Lógica Específica do Supabase:
+  // API (Dados) -> SEMPRE Rede (não cachear dados dinâmicos de tabelas)
+  // Storage (Arquivos/Sons) -> Cache First (para funcionar offline)
   if (event.request.url.startsWith(supabaseUrl)) {
-    event.respondWith(fetch(event.request));
-    return;
+    const isStorage = event.request.url.includes('/storage/v1/object/');
+
+    if (!isStorage) {
+      // É requisição de API (REST/Realtime), usar apenas rede
+      event.respondWith(fetch(event.request));
+      return;
+    }
+    // Se for Storage, deixa passar para a lógica de 'Cache First' abaixo
   }
 
   // Para outros recursos, usa a estratégia "Cache-First"
