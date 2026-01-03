@@ -1348,7 +1348,7 @@ export const ReportsContent: React.FC<{ events: MonitoringEvent[]; posts: Servic
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredEvents.slice(0, 10).map(event => (
+                            {filteredEvents.map(event => (
                                 <tr key={event.id} className="border-b border-gray-700">
                                     <td className="px-6 py-4 font-medium text-white">{event.id}</td>
                                     <td className="px-6 py-4">{event.timestamp.toLocaleString('pt-BR')}</td>
@@ -1362,13 +1362,7 @@ export const ReportsContent: React.FC<{ events: MonitoringEvent[]; posts: Servic
                                     <td className="px-6 py-4">{getStatusChip(event.status)}</td>
                                 </tr>
                             ))}
-                            {filteredEvents.length > 10 && (
-                                <tr>
-                                    <td colSpan={6} className="text-center py-4 text-gray-500 italic">
-                                        ...e mais {filteredEvents.length - 10} eventos (baixe o PDF para ver completo)
-                                    </td>
-                                </tr>
-                            )}
+
                             {filteredEvents.length === 0 && (
                                 <tr>
                                     <td colSpan={6} className="text-center py-8 text-gray-500">
