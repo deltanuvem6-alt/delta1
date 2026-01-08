@@ -46,7 +46,7 @@ const Sidebar: React.FC<{
     const isAdmin = currentUser?.username === 'admin';
 
     const navItems = allNavItems.filter(item => {
-        if (item.id === PageEnum.Dashboard) {
+        if (item.id === PageEnum.Dashboard || item.id === PageEnum.AlertaVigia) {
             return isAdmin;
         }
         return true;
