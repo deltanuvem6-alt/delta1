@@ -11,7 +11,8 @@ export const Modal: React.FC<{
     footer?: React.ReactNode;
     paddingClass?: string;
     maxWidthClass?: string;
-}> = ({ isOpen, onClose, children, title, footer, paddingClass = 'p-4 sm:p-6 space-y-4', maxWidthClass = 'max-w-md' }) => {
+    scrollClass?: string;
+}> = ({ isOpen, onClose, children, title, footer, paddingClass = 'p-4 sm:p-6 space-y-4', maxWidthClass = 'max-w-md', scrollClass = 'overflow-y-auto' }) => {
     if (!isOpen) return null;
 
     return (
@@ -25,7 +26,7 @@ export const Modal: React.FC<{
                         </button>
                     </div>
                 )}
-                <div className={`${paddingClass} overflow-y-auto`}>
+                <div className={`${paddingClass} ${scrollClass}`}>
                     {children}
                 </div>
                 {footer && (
@@ -61,9 +62,9 @@ export const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogi
             setError(result);
         }
     };
-    
+
     return (
-        <Modal isOpen={isOpen} onClose={onClose} paddingClass="p-6 sm:p-8" maxWidthClass="max-w-sm">
+        <Modal isOpen={isOpen} onClose={onClose} paddingClass="p-6 sm:p-8" maxWidthClass="max-w-sm" scrollClass="overflow-y-auto no-scrollbar">
             <div className="flex flex-col items-center text-center">
                 <div className="bg-blue-600/30 p-3 rounded-xl mb-4">
                     <ShieldCheckIcon className="w-8 h-8 text-blue-400" />
@@ -76,7 +77,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogi
                 <h3 className="text-2xl font-bold text-blue-400">Acesso Restrito</h3>
                 <p className="text-sm text-slate-400">Faça login para continuar</p>
             </div>
-            
+
             <form id="login-form" className="space-y-4" onSubmit={handleSubmit}>
                 <div>
                     <label htmlFor="login-user" className="sr-only">Usuário</label>
@@ -87,7 +88,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogi
                     <div className="relative">
                         <input id="login-pass" value={password} onChange={e => setPassword(e.target.value)} type={showPassword ? 'text' : 'password'} placeholder="Senha" className="bg-slate-800/50 border border-slate-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-3 pr-10" required />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white">
-                            {showPassword ? <EyeOffIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                            {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                         </button>
                     </div>
                 </div>
@@ -97,7 +98,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogi
                 </div>
 
                 {error && <p className="text-sm text-red-400 text-center !mt-2">{error}</p>}
-                
+
                 <button type="submit" className="w-full text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 focus:ring-4 focus:outline-none focus:ring-blue-800 font-bold rounded-lg text-base px-5 py-3 text-center transition-all !mt-6">Entrar</button>
             </form>
 
@@ -132,7 +133,7 @@ const PasswordStrengthMeter: React.FC<{ password: string }> = ({ password }) => 
                     <div key={i} className={`h-1.5 rounded-full flex-1 ${i < strength ? colors[strength] : 'bg-gray-600'}`}></div>
                 ))}
             </div>
-            {password && <p className="text-xs mt-1 text-right" style={{color: colors[strength].replace('bg-', '')}}>{labels[strength]}</p>}
+            {password && <p className="text-xs mt-1 text-right" style={{ color: colors[strength].replace('bg-', '') }}>{labels[strength]}</p>}
         </div>
     );
 };
@@ -158,7 +159,7 @@ export const RegisterModal: React.FC<{ isOpen: boolean; onClose: () => void; onR
             reader.readAsDataURL(file);
         }
     };
-    
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
@@ -167,7 +168,7 @@ export const RegisterModal: React.FC<{ isOpen: boolean; onClose: () => void; onR
             setError('As senhas não coincidem.');
             return;
         }
-        
+
         setLoading(true);
 
         const formData = new FormData(e.currentTarget);
@@ -186,7 +187,7 @@ export const RegisterModal: React.FC<{ isOpen: boolean; onClose: () => void; onR
         if (typeof result === 'string') {
             setError(result);
         }
-        
+
         setLoading(false);
     };
 
@@ -231,13 +232,13 @@ export const RegisterModal: React.FC<{ isOpen: boolean; onClose: () => void; onR
                 <div className="relative">
                     <input name="password" type={showPassword ? 'text' : 'password'} placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5 w-full" required />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
-                        {showPassword ? <EyeOffIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                        {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                     </button>
                 </div>
                 <div className="relative">
                     <input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirmar Senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5 w-full" required />
                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
-                        {showConfirmPassword ? <EyeOffIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                        {showConfirmPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                     </button>
                 </div>
                 <PasswordStrengthMeter password={password} />
@@ -246,10 +247,10 @@ export const RegisterModal: React.FC<{ isOpen: boolean; onClose: () => void; onR
     );
 };
 
-export const EditCompanyModal: React.FC<{ 
-    isOpen: boolean; 
-    onClose: () => void; 
-    onSave: (company: Company) => void; 
+export const EditCompanyModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (company: Company) => void;
     company: Company | null;
 }> = ({ isOpen, onClose, onSave, company }) => {
     const [formData, setFormData] = useState<Company | null>(null);
@@ -306,11 +307,11 @@ export const EditCompanyModal: React.FC<{
                 return;
             }
             if (newPassword.length > 0 && newPassword.length < 6) {
-                 setPasswordError('A nova senha deve ter pelo menos 6 caracteres.');
+                setPasswordError('A nova senha deve ter pelo menos 6 caracteres.');
                 return;
             }
         }
-        
+
         if (formData) {
             const finalData = { ...formData };
             if (isChangingPassword && newPassword) {
@@ -322,37 +323,37 @@ export const EditCompanyModal: React.FC<{
 
     const footer = (
         <div className="flex justify-end gap-4">
-             <button type="button" onClick={onClose} className="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 text-white">Cancelar</button>
-             <button type="submit" form="edit-company-form" className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white">Salvar Alterações</button>
+            <button type="button" onClick={onClose} className="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 text-white">Cancelar</button>
+            <button type="submit" form="edit-company-form" className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white">Salvar Alterações</button>
         </div>
     );
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Editar ${company?.name}`} footer={footer}>
             <form id="edit-company-form" onSubmit={handleSubmit} className="space-y-4">
-                 <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center">
                     <div className="w-24 h-24 rounded-full bg-gray-700 flex items-center justify-center mb-2 overflow-hidden border-2 border-gray-600">
                         {logoPreview ? <img src={logoPreview} alt="Preview" className="w-full h-full object-cover" /> : <UploadCloud className="w-10 h-10 text-gray-500" />}
                     </div>
                     <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm text-blue-500 hover:underline">Alterar logo</button>
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
                 </div>
-                
+
                 <label className="block text-sm font-medium text-gray-300 -mb-2">Nome da Empresa</label>
                 <input name="name" value={formData.name} onChange={handleChange} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5 w-full" required />
-                
+
                 <label className="block text-sm font-medium text-gray-300 -mb-2">CNPJ</label>
                 <input name="cnpj" value={formData.cnpj} onChange={handleChange} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5 w-full" required />
-                
+
                 <label className="block text-sm font-medium text-gray-300 -mb-2">Localização</label>
                 <input name="location" value={formData.location} onChange={handleChange} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5 w-full" required />
-                
+
                 <label className="block text-sm font-medium text-gray-300 -mb-2">Email</label>
                 <input name="email" type="email" value={formData.email} onChange={handleChange} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5 w-full" required />
-                
+
                 <label className="block text-sm font-medium text-gray-300 -mb-2">WhatsApp</label>
                 <input name="whatsapp" value={formData.whatsapp} onChange={handleChange} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5 w-full" required />
-                
+
                 <label className="block text-sm font-medium text-gray-300 -mb-2">Usuário</label>
                 <input name="username" value={formData.username} onChange={handleChange} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5 w-full" required />
 
@@ -372,7 +373,7 @@ export const EditCompanyModal: React.FC<{
                                     placeholder="••••••••"
                                 />
                                 <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
-                                    {showNewPassword ? <EyeOffIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                                    {showNewPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                                 </button>
                             </div>
                         </div>
@@ -387,7 +388,7 @@ export const EditCompanyModal: React.FC<{
                                     placeholder="••••••••"
                                 />
                                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
-                                    {showConfirmPassword ? <EyeOffIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                                    {showConfirmPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                                 </button>
                             </div>
                         </div>
@@ -409,11 +410,11 @@ export const EditCompanyModal: React.FC<{
 };
 
 
-export const ConfirmationModal: React.FC<{ 
-    isOpen: boolean; 
-    onClose: () => void; 
-    onConfirm: () => void; 
-    title: string; 
+export const ConfirmationModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
     message: string;
     confirmButtonClass?: string;
 }> = ({ isOpen, onClose, onConfirm, title, message, confirmButtonClass }) => {
@@ -423,7 +424,7 @@ export const ConfirmationModal: React.FC<{
             <button onClick={onConfirm} className={`w-full sm:w-auto py-2 px-4 rounded-lg text-white ${confirmButtonClass || 'bg-red-600 hover:bg-red-700'}`}>Confirmar</button>
         </div>
     );
-    
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={title} footer={footer}>
             <p className="text-gray-300">{message}</p>
@@ -477,8 +478,8 @@ export const AddPostModal: React.FC<{
 
     const footer = (
         <div className="flex justify-end gap-4">
-             <button type="button" onClick={onClose} className="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 text-white">Cancelar</button>
-             <button type="submit" form="add-post-form" className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white">Salvar Posto</button>
+            <button type="button" onClick={onClose} className="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 text-white">Cancelar</button>
+            <button type="submit" form="add-post-form" className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white">Salvar Posto</button>
         </div>
     );
 
@@ -525,17 +526,17 @@ export const AddPostModal: React.FC<{
                 <div>
                     <label htmlFor="post-password-add" className="block mb-2 text-sm font-medium text-gray-300">Senha do Posto</label>
                     <div className="relative">
-                        <input 
+                        <input
                             id="post-password-add"
-                            type={showPassword ? 'text' : 'password'} 
+                            type={showPassword ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5 w-full pr-10" 
+                            className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5 w-full pr-10"
                             placeholder="••••••••"
-                            required 
+                            required
                         />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
-                            {showPassword ? <EyeOffIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                            {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                         </button>
                     </div>
                 </div>
@@ -552,7 +553,7 @@ export const EditPostModal: React.FC<{
 }> = ({ isOpen, onClose, onSave, post }) => {
     const [formData, setFormData] = useState<ServicePost | null>(null);
     const [showPassword, setShowPassword] = useState(false);
-    
+
     useEffect(() => {
         if (post) {
             setFormData(post);
@@ -619,7 +620,7 @@ export const EditPostModal: React.FC<{
                             required
                         />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
-                            {showPassword ? <EyeOffIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                            {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
                         </button>
                     </div>
                 </div>
@@ -637,7 +638,7 @@ export const InfoModal: React.FC<{
     buttonText?: string;
     autoCloseDelay?: number;
 }> = ({ isOpen, onClose, title, message, buttonText = "Entendi", autoCloseDelay }) => {
-    
+
     useEffect(() => {
         if (isOpen && autoCloseDelay) {
             const timer = setTimeout(() => {
@@ -646,7 +647,7 @@ export const InfoModal: React.FC<{
             return () => clearTimeout(timer);
         }
     }, [isOpen, autoCloseDelay, onClose]);
-    
+
     const footer = !autoCloseDelay ? (
         <div className="flex justify-end gap-4">
             <button onClick={onClose} className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium">
@@ -689,7 +690,7 @@ export const CommentModal: React.FC<{
         e.preventDefault();
         onSave(event.id, comment);
     };
-    
+
     const remainingChars = 100 - comment.length;
 
     const footer = (
@@ -709,7 +710,7 @@ export const CommentModal: React.FC<{
             <form id="comment-form" onSubmit={handleSubmit}>
                 <div>
                     <p className="mb-2 text-sm text-gray-300">
-                        <strong>Posto:</strong> {event.postName}<br/>
+                        <strong>Posto:</strong> {event.postName}<br />
                         <strong>Evento:</strong> {event.type}
                     </p>
                     <label htmlFor="comment-textarea" className="block mb-2 text-sm font-medium text-gray-300">Descreva o que aconteceu:</label>
