@@ -737,30 +737,24 @@ function App() {
 
             // Verificar se estamos dentro da janela de verificação (3 a 10 minutos após ativação)
             if (minutesSinceActivation >= 3 && minutesSinceActivation <= 10) {
-                // Criar referência de tempo para o turno atual
-                let activationRef = new Date(now);
-                activationRef.setHours(activationHours, activationMinutes, 0, 0);
+                // CORREÇÃO: Buscar eventos nos últimos 10 minutos (mais simples e preciso)
+                const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
 
-                // Ajuste retroativo para overnight
-                if (activationTotalMinutes > deactivationTotalMinutes && nowMinutes < deactivationTotalMinutes) {
-                    activationRef.setDate(activationRef.getDate() - 1);
-                }
-
-                // Verificar se o App enviou o sinal de Ativação (se estiver fechado/sem net, não envia)
-                const hasActivatedToday = eventsForPost.some(e =>
+                // Verificar se o App enviou o sinal de Ativação nos últimos 10 minutos
+                const hasActivatedRecently = eventsForPost.some(e =>
                     e.type === EventType.SystemActivated &&
-                    e.timestamp >= activationRef
+                    e.timestamp >= tenMinutesAgo
                 );
 
-                if (!hasActivatedToday) {
-                    // Check if we already alerted about this specific failure today
+                if (!hasActivatedRecently) {
+                    // Verificar se já alertamos nos últimos 10 minutos
                     const alreadyAlerted = eventsForPost.some(e =>
                         e.type === EventType.LocalSemInternet &&
-                        e.timestamp >= activationRef
+                        e.timestamp >= tenMinutesAgo
                     );
 
                     if (!alreadyAlerted) {
-                        console.log(`[CHECK] Posto ${post.name}: App não enviou ativação (provável app fechado/sem net). Gerando alerta.`);
+                        console.log(`[CHECK] Posto ${post.name}: App não enviou ativação nos últimos 10 min (provável app fechado/sem net). Gerando alerta.`);
                         createEvent(post.id, EventType.LocalSemInternet);
                     }
                     return;
@@ -777,35 +771,25 @@ function App() {
 
             // Verificar se estamos dentro da janela de verificação (3 a 10 minutos após desativação)
             if (minutesSinceDeactivation >= 3 && minutesSinceDeactivation <= 10) {
-                // Criar referência de tempo para a desativação
-                let deactivationRef = new Date(now);
-                deactivationRef.setHours(deactivationHours, deactivationMinutes, 0, 0);
+                // CORREÇÃO: Buscar eventos nos últimos 10 minutos (mais simples e preciso)
+                const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
 
-                // Ajustes de data para overnight...
-                if (activationTotalMinutes > deactivationTotalMinutes && nowMinutes >= deactivationTotalMinutes) {
-                    // hoje
-                } else if (activationTotalMinutes > deactivationTotalMinutes && nowMinutes < deactivationTotalMinutes) {
-                    // hoje
-                } else if (nowMinutes < deactivationTotalMinutes) {
-                    deactivationRef.setDate(deactivationRef.getDate() - 1);
-                }
-
-                // Verificar se o App enviou o sinal de Desativação (se estiver fechado/sem net, não envia)
-                const hasDeactivatedToday = eventsForPost.some(e =>
+                // Verificar se o App enviou o sinal de Desativação nos últimos 10 minutos
+                const hasDeactivatedRecently = eventsForPost.some(e =>
                     e.type === EventType.SystemDeactivated &&
-                    e.timestamp >= deactivationRef
+                    e.timestamp >= tenMinutesAgo
                 );
 
-                // Se não desativou, GERA O ALERTA (independente de heartbeat, pois o app pode ter sido fechado)
-                if (!hasDeactivatedToday) {
-                    // Check if we already alerted about this specific failure today
+                // Se não desativou nos últimos 10 minutos, GERA O ALERTA
+                if (!hasDeactivatedRecently) {
+                    // Verificar se já alertamos nos últimos 10 minutos
                     const alreadyAlerted = eventsForPost.some(e =>
                         e.type === EventType.LocalSemInternet &&
-                        e.timestamp >= deactivationRef
+                        e.timestamp >= tenMinutesAgo
                     );
 
                     if (!alreadyAlerted) {
-                        console.log(`[CHECK] Posto ${post.name}: App não enviou desativação (provável app fechado/sem net). Gerando alerta.`);
+                        console.log(`[CHECK] Posto ${post.name}: App não enviou desativação nos últimos 10 min (provável app fechado/sem net). Gerando alerta.`);
                         createEvent(post.id, EventType.LocalSemInternet);
                     }
                     return;
