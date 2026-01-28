@@ -665,7 +665,7 @@ function App() {
                 return;
             }
 
-            const gracePeriodMinutes = 3; // ALTERADO: 3 minutos de tolerância
+            const gracePeriodMinutes = 10; // ALTERADO: 10 minutos de tolerância
             const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
             const [activationHours, activationMinutes] = config.activationTime.split(':').map(Number);
@@ -735,26 +735,27 @@ function App() {
                 minutesSinceActivation += 24 * 60;
             }
 
-            // Verificar se estamos dentro da janela de verificação (3 a 10 minutos após ativação)
-            if (minutesSinceActivation >= 3 && minutesSinceActivation <= 10) {
-                // CORREÇÃO: Buscar eventos nos últimos 10 minutos (mais simples e preciso)
-                const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+            // Verificar se estamos dentro da janela de verificação (10 a 15 minutos após ativação)
+            if (minutesSinceActivation >= 10 && minutesSinceActivation <= 15) {
+                // CORREÇÃO: Buscar eventos nos últimos 15 minutos
+                const checkWindowMinutes = 15;
+                const windowAgo = new Date(now.getTime() - checkWindowMinutes * 60 * 1000);
 
-                // Verificar se o App enviou o sinal de Ativação nos últimos 10 minutos
-                const hasActivatedRecently = eventsForPost.some(e =>
-                    e.type === EventType.SystemActivated &&
-                    e.timestamp >= tenMinutesAgo
+                // REGRA: Verificar se o App enviou o sinal de Ativação OU Desativação nos últimos 15 minutos
+                const hasSystemEventRecently = eventsForPost.some(e =>
+                    (e.type === EventType.SystemActivated || e.type === EventType.SystemDeactivated) &&
+                    e.timestamp >= windowAgo
                 );
 
-                if (!hasActivatedRecently) {
-                    // Verificar se já alertamos nos últimos 10 minutos
+                if (!hasSystemEventRecently) {
+                    // Verificar se já alertamos nos últimos 15 minutos
                     const alreadyAlerted = eventsForPost.some(e =>
                         e.type === EventType.LocalSemInternet &&
-                        e.timestamp >= tenMinutesAgo
+                        e.timestamp >= windowAgo
                     );
 
                     if (!alreadyAlerted) {
-                        console.log(`[CHECK] Posto ${post.name}: App não enviou ativação nos últimos 10 min (provável app fechado/sem net). Gerando alerta.`);
+                        console.log(`[CHECK] Posto ${post.name}: App não enviou Ativação/Desativação nos últimos 15 min. Gerando alerta.`);
                         createEvent(post.id, EventType.LocalSemInternet);
                     }
                     return;
@@ -769,27 +770,28 @@ function App() {
                 minutesSinceDeactivation += 24 * 60;
             }
 
-            // Verificar se estamos dentro da janela de verificação (3 a 10 minutos após desativação)
-            if (minutesSinceDeactivation >= 3 && minutesSinceDeactivation <= 10) {
-                // CORREÇÃO: Buscar eventos nos últimos 10 minutos (mais simples e preciso)
-                const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+            // Verificar se estamos dentro da janela de verificação (10 a 15 minutos após desativação)
+            if (minutesSinceDeactivation >= 10 && minutesSinceDeactivation <= 15) {
+                // CORREÇÃO: Buscar eventos nos últimos 15 minutos
+                const checkWindowMinutes = 15;
+                const windowAgo = new Date(now.getTime() - checkWindowMinutes * 60 * 1000);
 
-                // Verificar se o App enviou o sinal de Desativação nos últimos 10 minutos
-                const hasDeactivatedRecently = eventsForPost.some(e =>
-                    e.type === EventType.SystemDeactivated &&
-                    e.timestamp >= tenMinutesAgo
+                // REGRA: Verificar se o App enviou o sinal de Desativação OU Ativação nos últimos 15 minutos
+                const hasSystemEventRecently = eventsForPost.some(e =>
+                    (e.type === EventType.SystemDeactivated || e.type === EventType.SystemActivated) &&
+                    e.timestamp >= windowAgo
                 );
 
-                // Se não desativou nos últimos 10 minutos, GERA O ALERTA
-                if (!hasDeactivatedRecently) {
-                    // Verificar se já alertamos nos últimos 10 minutos
+                // Se não ouve comunicação nos últimos 15 minutos, GERA O ALERTA
+                if (!hasSystemEventRecently) {
+                    // Verificar se já alertamos nos últimos 15 minutos
                     const alreadyAlerted = eventsForPost.some(e =>
                         e.type === EventType.LocalSemInternet &&
-                        e.timestamp >= tenMinutesAgo
+                        e.timestamp >= windowAgo
                     );
 
                     if (!alreadyAlerted) {
-                        console.log(`[CHECK] Posto ${post.name}: App não enviou desativação nos últimos 10 min (provável app fechado/sem net). Gerando alerta.`);
+                        console.log(`[CHECK] Posto ${post.name}: App não enviou Desativação/Ativação nos últimos 15 min. Gerando alerta.`);
                         createEvent(post.id, EventType.LocalSemInternet);
                     }
                     return;
