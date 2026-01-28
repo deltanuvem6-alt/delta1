@@ -707,26 +707,6 @@ function App() {
 
             const eventsForPost = events.filter(e => e.postId === post.id);
 
-            // LÓGICA INTELIGENTE DE DUPLICIDADE:
-            // 1. Busca o último evento "Sem Comunicação" deste posto.
-            const lastCommEvent = eventsForPost
-                .filter(e => e.type === EventType.LocalSemInternet)
-                .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
-
-            if (lastCommEvent) {
-                const eventTime = lastCommEvent.timestamp.getTime();
-                const lastHbTime = post.last_heartbeat ? new Date(post.last_heartbeat).getTime() : 0;
-
-                // 2. Se o último heartbeat for ANTERIOR ao último evento, significa que a conexão NÃO VOLTOU desde o alerta.
-                //    Neste caso, bloqueia novos alertas para evitar spam (mesma falha contínua).
-                if (lastHbTime <= eventTime) {
-                    return;
-                }
-
-                // 3. Se o heartbeat for MAIOR que o evento, significa que a internet VOLTOU e CAIU DE NOVO.
-                //    Neste caso, permite gerar um novo alerta (nova falha).
-            }
-
             // ========== VERIFICAÇÃO 1: FALTA DE ATIVAÇÃO ==========
             // Calcular diferença de tempo desde a ativação programada
             let minutesSinceActivation = nowMinutes - activationTotalMinutes;
