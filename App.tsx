@@ -687,55 +687,33 @@ function App() {
                 }
             }
 
-            // NOVA REGRA: Se o posto enviou heartbeat na última hora, consideramos que ele ESTÁ operando,
-            // independente do horário configurado. Isso permite testes fora de hora e monitora horas extras.
-            let recentlyActive = false;
-
-            if (post.last_heartbeat) {
-                const lastHb = new Date(post.last_heartbeat).getTime();
-                const diffMs = now.getTime() - lastHb;
-                if (diffMs < 60 * 60 * 1000) { // 60 minutos
-                    recentlyActive = true;
-                }
-            }
-
-            // DEBUG LOGS
-            // console.log(`[CHECK DEBUG] Post: ${post.name} (ID: ${post.id})`);
-            // console.log(`Config: Activ=${config.activationTime}, Deactiv=${config.deactivationTime}`);
-            // console.log(`Status: ShouldActive=${shouldBeActive}, RecentlyActive=${recentlyActive}`);
-            // console.log(`Now: ${now.toISOString()}, LastHB: ${post.last_heartbeat}`);
-
             const eventsForPost = events.filter(e => e.postId === post.id);
 
             // ========== VERIFICAÇÃO 1: FALTA DE ATIVAÇÃO ==========
             // Calcular diferença de tempo desde a ativação programada
             let minutesSinceActivation = nowMinutes - activationTotalMinutes;
-            if (minutesSinceActivation < 0) {
-                // Se deu negativo, significa que virou o dia (overnight)
-                minutesSinceActivation += 24 * 60;
-            }
+            if (minutesSinceActivation < 0) minutesSinceActivation += 24 * 60;
 
-            // Verificar se estamos dentro da janela de verificação (10 a 15 minutos após ativação)
-            if (minutesSinceActivation >= 10 && minutesSinceActivation <= 15) {
-                // CORREÇÃO: Buscar eventos nos últimos 15 minutos
-                const checkWindowMinutes = 15;
-                const windowAgo = new Date(now.getTime() - checkWindowMinutes * 60 * 1000);
+            // Se passaram entre 10 e 20 minutos do horário de ATIVAÇÃO
+            if (minutesSinceActivation >= 10 && minutesSinceActivation <= 20) {
+                // REGRA: Buscar se houve comunicação na última hora (janela bem larga para segurança)
+                const searchWindow = 60;
+                const windowAgo = new Date(now.getTime() - searchWindow * 60 * 1000);
 
-                // REGRA: Verificar se o App enviou o sinal de Ativação OU Desativação nos últimos 15 minutos
-                const hasSystemEventRecently = eventsForPost.some(e =>
+                const hasSystemEvent = eventsForPost.some(e =>
                     (e.type === EventType.SystemActivated || e.type === EventType.SystemDeactivated) &&
                     e.timestamp >= windowAgo
                 );
 
-                if (!hasSystemEventRecently) {
-                    // Verificar se já alertamos nos últimos 15 minutos
+                if (!hasSystemEvent) {
+                    // Verificar se já geramos este alerta específico nos últimos 20 minutos para evitar duplicidade
                     const alreadyAlerted = eventsForPost.some(e =>
                         e.type === EventType.LocalSemInternet &&
                         e.timestamp >= windowAgo
                     );
 
                     if (!alreadyAlerted) {
-                        console.log(`[CHECK] Posto ${post.name}: App não enviou Ativação/Desativação nos últimos 15 min. Gerando alerta.`);
+                        console.log(`[CHECK] Posto ${post.name}: Sem sinal de ativação/comunicação nos últimos 60 min. Gerando alerta.`);
                         createEvent(post.id, EventType.LocalSemInternet);
                     }
                     return;
@@ -745,55 +723,32 @@ function App() {
             // ========== VERIFICAÇÃO 2: FALTA DE DESATIVAÇÃO ==========
             // Calcular diferença de tempo desde a desativação programada
             let minutesSinceDeactivation = nowMinutes - deactivationTotalMinutes;
-            if (minutesSinceDeactivation < 0) {
-                // Se deu negativo, significa que virou o dia (overnight)
-                minutesSinceDeactivation += 24 * 60;
-            }
+            if (minutesSinceDeactivation < 0) minutesSinceDeactivation += 24 * 60;
 
-            // Verificar se estamos dentro da janela de verificação (10 a 15 minutos após desativação)
-            if (minutesSinceDeactivation >= 10 && minutesSinceDeactivation <= 15) {
-                // CORREÇÃO: Buscar eventos nos últimos 15 minutos
-                const checkWindowMinutes = 15;
-                const windowAgo = new Date(now.getTime() - checkWindowMinutes * 60 * 1000);
+            // Se passaram entre 10 e 20 minutos do horário de DESATIVAÇÃO
+            if (minutesSinceDeactivation >= 10 && minutesSinceDeactivation <= 20) {
+                // REGRA: Buscar se houve comunicação na última hora
+                const searchWindow = 60;
+                const windowAgo = new Date(now.getTime() - searchWindow * 60 * 1000);
 
-                // REGRA: Verificar se o App enviou o sinal de Desativação OU Ativação nos últimos 15 minutos
-                const hasSystemEventRecently = eventsForPost.some(e =>
+                const hasSystemEvent = eventsForPost.some(e =>
                     (e.type === EventType.SystemDeactivated || e.type === EventType.SystemActivated) &&
                     e.timestamp >= windowAgo
                 );
 
-                // Se não ouve comunicação nos últimos 15 minutos, GERA O ALERTA
-                if (!hasSystemEventRecently) {
-                    // Verificar se já alertamos nos últimos 15 minutos
+                if (!hasSystemEvent) {
                     const alreadyAlerted = eventsForPost.some(e =>
                         e.type === EventType.LocalSemInternet &&
                         e.timestamp >= windowAgo
                     );
 
                     if (!alreadyAlerted) {
-                        console.log(`[CHECK] Posto ${post.name}: App não enviou Desativação/Ativação nos últimos 15 min. Gerando alerta.`);
+                        console.log(`[CHECK] Posto ${post.name}: Sem sinal de desativação/comunicação nos últimos 60 min. Gerando alerta.`);
                         createEvent(post.id, EventType.LocalSemInternet);
                     }
                     return;
                 }
             }
-
-            // ========== VERIFICAÇÃO 3: PERDA DE HEARTBEAT DURANTE OPERAÇÃO ==========
-            // DESATIVADA: O cliente solicitou que apenas falhas de Ativação/Desativação gerem alerta.
-            // Oscilações durante o turno serão ignoradas para evitar spam na tabela.
-            /*
-            if (shouldBeActive || recentlyActive) {
-                if (post.last_heartbeat) {
-                    const lastHeartbeatTime = new Date(post.last_heartbeat).getTime();
-                    const secondsSinceHeartbeat = (now.getTime() - lastHeartbeatTime) / 1000;
-
-                    if (secondsSinceHeartbeat > 180) { // 3 minutos sem sinal
-                        console.log(`[CHECK] Posto ${post.name}: Sem heartbeat há ${secondsSinceHeartbeat}s. Gerando alerta.`);
-                        createEvent(post.id, EventType.LocalSemInternet);
-                    }
-                }
-            }
-            */
         });
     }, [isLoggedIn, currentUser, posts, alertaVigiaConfigs, events, activeVigiaPost, createEvent]);
 
