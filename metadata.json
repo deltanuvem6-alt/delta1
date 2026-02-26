@@ -1,0 +1,5 @@
+{
+  "name": "Delta.v3",
+  "description": "A modern, clean CRM-style web application for 24/7 monitoring of security guards and access controllers. The app monitors events, provides dashboards, alerts, admin controls, email notifications and account management.",
+  "requestFramePermissions": []
+}

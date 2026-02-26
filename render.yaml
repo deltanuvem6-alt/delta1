@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: deltanuvem
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: NODE_ENV
+        value: production
+      - key: VITE_SUPABASE_URL
+        value: https://hrubgwggnnxyqeomhhyc.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhydWJnd2dnbm54eXFlb21oaHljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMDUzNzAsImV4cCI6MjA3NzY4MTM3MH0.TZltc5EPe5N_gbt0i88ROUPoZtbS52Z1FImhLINehrs
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+

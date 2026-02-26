@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Mockup – Relatório com Checkbox</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #111827;
+            font-family: 'Segoe UI', sans-serif;
+            color: #d1d5db;
+            padding: 32px;
+        }
+
+        h2 {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-red {
+            background: #7f1d1d;
+            color: #fecaca;
+        }
+
+        .badge-green {
+            background: #14532d;
+            color: #bbf7d0;
+        }
+
+        .badge-yellow {
+            background: #78350f;
+            color: #fef08a;
+        }
+
+        .badge-sky {
+            background: #0c4a6e;
+            color: #bae6fd;
+        }
+
+        .badge-slate {
+            background: #1e293b;
+            color: #cbd5e1;
+        }
+
+        .badge-orange {
+            background: #7c2d12;
+            color: #fed7aa;
+        }
+
+        .card {
+            background: rgba(31, 41, 55, 0.5);
+            border: 1px solid #374151;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #374151;
+        }
+
+        .btn-delete {
+            background: #dc2626;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap-6px;
+            gap: 6px;
+            opacity: 0.5;
+            transition: opacity .2s;
+        }
+
+        .btn-delete.active {
+            opacity: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: rgba(55, 65, 81, 0.5);
+        }
+
+        thead th {
+            padding: 10px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #9ca3af;
+            letter-spacing: .05em;
+        }
+
+        thead th.cb-col {
+            padding: 10px 14px;
+            width: 44px;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #374151;
+            transition: background .15s;
+        }
+
+        tbody tr:hover {
+            background: rgba(55, 65, 81, 0.3);
+        }
+
+        tbody tr.selected {
+            background: rgba(37, 99, 235, 0.08);
+        }
+
+        td {
+            padding: 12px 16px;
+            vertical-align: middle;
+        }
+
+        td.cb-col {
+            padding: 12px 14px;
+            width: 44px;
+        }
+
+        td.bold {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        input[type=checkbox] {
+            width: 16px;
+            height: 16px;
+            accent-color: #2563eb;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        input[type=checkbox]:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .note {
+            margin-top: 20px;
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid #2563eb40;
+            border-radius: 8px;
+            padding: 14px 18px;
+            font-size: 12px;
+            color: #93c5fd;
+        }
+
+        .note strong {
+            color: #bfdbfe;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Relatório de Eventos (<span id="total">6</span> eventos)</h2>
+            <button class="btn-delete" id="btnDelete" disabled onclick="deleteSelected()">
+                🗑️ <span id="btnLabel">Deletar Selecionados</span>
+            </button>
+        </div>
+        <div style="overflow-x:auto">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="cb-col">
+                            <input type="checkbox" id="selectAll" onchange="toggleAll(this)"
+                                title="Selecionar todos os Resolvidos" />
+                        </th>
+                        <th>ID Evento</th>
+                        <th>Data/Hora</th>
+                        <th>Posto</th>
+                        <th>Evento</th>
+                        <th>Comentário</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody">
+                    <!-- Linhas injetadas via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="note">
+        📌 <strong>Regra:</strong> Apenas eventos com status <strong>"Resolvido"</strong> podem ser selecionados para
+        deletar. Eventos <strong>"Não Resolvido"</strong> ficam com checkbox desabilitado (cinza).
+    </div>
+
+    <script>
+        const events = [
+            { id: 1021, dt: '24/02/2026 08:14', posto: 'Portaria Norte', tipo: 'Botão de Pânico', tipoCls: 'badge-red', comment: 'Acionado por engano', status: 'Resolvido', resolvido: true },
+            { id: 1022, dt: '24/02/2026 09:30', posto: 'Portaria Sul', tipo: 'Vigia Adormeceu', tipoCls: 'badge-yellow', comment: '—', status: 'Não Resolvido', resolvido: false },
+            { id: 1023, dt: '24/02/2026 10:05', posto: 'Bloco A', tipo: 'Sistema Ativado', tipoCls: 'badge-sky', comment: 'Ok', status: 'Resolvido', resolvido: true },
+            { id: 1024, dt: '24/02/2026 10:22', posto: 'Portaria Norte', tipo: 'Sem Internet', tipoCls: 'badge-orange', comment: '—', status: 'Não Resolvido', resolvido: false },
+            { id: 1025, dt: '24/02/2026 11:00', posto: 'Bloco B', tipo: 'Sistema Desativado', tipoCls: 'badge-slate', comment: 'Fim de turno', status: 'Resolvido', resolvido: true },
+            { id: 1026, dt: '24/02/2026 11:20', posto: 'Portaria Sul', tipo: 'Portaria Online', tipoCls: 'badge-green', comment: '—', status: 'Resolvido', resolvido: true },
+        ];
+
+        let selected = new Set();
+
+        function render() {
+            const tbody = document.getElementById('tbody');
+            tbody.innerHTML = '';
+            events.forEach(ev => {
+                const isSelected = selected.has(ev.id);
+                const tr = document.createElement('tr');
+                if (isSelected) tr.classList.add('selected');
+                tr.innerHTML = `
+      <td class="cb-col">
+        <input type="checkbox" ${ev.resolvido ? '' : 'disabled'} ${isSelected ? 'checked' : ''} onchange="toggle(${ev.id}, this)" />
+      </td>
+      <td class="bold">${ev.id}</td>
+      <td>${ev.dt}</td>
+      <td>${ev.posto}</td>
+      <td><span class="badge ${ev.tipoCls}">${ev.tipo}</span></td>
+      <td>${ev.comment}</td>
+      <td>
+        <span class="badge ${ev.resolvido ? 'badge-green' : 'badge-red'}">
+          ${ev.status}
+        </span>
+      </td>`;
+                tbody.appendChild(tr);
+            });
+            updateBtn();
+        }
+
+        function toggle(id, el) {
+            if (el.checked) selected.add(id);
+            else selected.delete(id);
+            render();
+        }
+
+        function toggleAll(el) {
+            const resolvedIds = events.filter(e => e.resolvido).map(e => e.id);
+            if (el.checked) resolvedIds.forEach(id => selected.add(id));
+            else selected.clear();
+            render();
+        }
+
+        function updateBtn() {
+            const btn = document.getElementById('btnDelete');
+            const lbl = document.getElementById('btnLabel');
+            const n = selected.size;
+            lbl.textContent = n > 0 ? `Deletar ${n} Selecionado(s)` : 'Deletar Selecionados';
+            btn.disabled = n === 0;
+            btn.classList.toggle('active', n > 0);
+
+            // atualiza select-all
+            const resolvedIds = events.filter(e => e.resolvido).map(e => e.id);
+            document.getElementById('selectAll').checked = resolvedIds.length > 0 && resolvedIds.every(id => selected.has(id));
+        }
+
+        function deleteSelected() {
+            if (!confirm(`Deletar ${selected.size} evento(s) selecionado(s)?`)) return;
+            events.splice(0, events.length, ...events.filter(e => !selected.has(e.id)));
+            selected.clear();
+            document.getElementById('total').textContent = events.length;
+            render();
+        }
+
+        render();
+    </script>
+</body>
+
+</html>
