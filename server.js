@@ -32,19 +32,27 @@ const port = process.env.PORT || 3001;
 const smtpConfig = {
     host: process.env.SMTP_HOST || 'smtp.hostinger.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_PORT === '465',
+    secure: process.env.SMTP_PORT === '465', // true para 465, false para outras
     auth: {
         user: process.env.SMTP_USER || 'alerta@deltanuvem.com',
         pass: process.env.SMTP_PASS || 'Dvr@121314',
     },
     tls: {
-        rejectUnauthorized: false
+        // ESSENCIAL PARA NODE 20: Garante que o TLS seja negociado mesmo em portas STARTTLS
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2'
     }
 };
 
 console.log(`📧 [SMTP] Configurando host: ${smtpConfig.host}:${smtpConfig.port} (SSL: ${smtpConfig.secure})`);
 
-const transporter = nodemailer.createTransport(smtpConfig);
+const transporter = nodemailer.createTransport({
+    ...smtpConfig,
+    // Adicionando um timeout para não deixar o robô travado em conexões lentas
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000
+});
 
 // Template de Email
 const generateEmailHtml = (title, details) => {
