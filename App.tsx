@@ -389,33 +389,35 @@ const App = () => {
 
     // AUTO-LOGIN ALERTA VIGIA (Compatível com APK v1)
     useEffect(() => {
-        const autoLogin = async () => {
+        const autoLoginVigia = async () => {
             const savedCreds = localStorage.getItem('vigia_creds');
             if (savedCreds && !activeVigiaPost) {
                 try {
                     const { postId, password } = JSON.parse(savedCreds);
                     if (postId && password) {
-                        console.log("[AUTO-LOGIN] Restaurando sessão do APK v1 para o posto:", postId);
-                        const result = await handleSendAlertVigiaAction(postId.toString(), password);
-
-                        if (typeof result === 'string') {
-                            console.warn("[AUTO-LOGIN] Bloqueado ou Falhou:", result);
-                            setInfoModal({
-                                isOpen: true,
-                                title: 'Sessão Protegida',
-                                message: `O login automático foi impedido: ${result}`,
-                                autoCloseDelay: 5000
-                            });
-                        }
+                        console.log("[AUTO-LOGIN VIGIA] Restaurando sessão...");
+                        await handleSendAlertVigiaAction(postId.toString(), password);
                     }
-                } catch (e) {
-                    console.error("[AUTO-LOGIN] Erro ao processar vigia_creds:", e);
-                }
+                } catch (e) { }
+            }
+        };
+
+        const autoLoginCompany = async () => {
+            const saved = localStorage.getItem('company_creds');
+            if (saved && !isLoggedIn) {
+                try {
+                    const { u, p } = JSON.parse(saved);
+                    if (u && p) {
+                        console.log("[AUTO-LOGIN EMPRESA] Restaurando sessão...");
+                        await handleLogin(u, p, true);
+                    }
+                } catch (e) { }
             }
         };
 
         if (!loading && isOnline) {
-            autoLogin();
+            autoLoginVigia();
+            autoLoginCompany();
         }
     }, [loading, isOnline]);
 
@@ -959,7 +961,7 @@ const App = () => {
         }
     };
 
-    const handleLogin = async (username: string, password: string): Promise<string | true> => {
+    const handleLogin = async (username: string, password: string, remember: boolean): Promise<string | true> => {
         const { data: user, error } = await supabase
             .from('companies')
             .select('*')
@@ -980,6 +982,13 @@ const App = () => {
 
         if (user.blocked) {
             return 'Sua conta está pendente de aprovação. Por favor, aguarde.';
+        }
+
+        // SALVAR CREDENCIAIS SE "LEMBRAR" ESTIVER MARCADO
+        if (remember) {
+            localStorage.setItem('company_creds', JSON.stringify({ u: username, p: password }));
+        } else {
+            localStorage.removeItem('company_creds');
         }
 
         const currentUserData: Company = { ...user, postCount: user.post_count };

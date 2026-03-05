@@ -39,16 +39,29 @@ export const Modal: React.FC<{
     );
 };
 
-export const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: (username: string, password: string) => Promise<string | true>; onSwitchToRegister: () => void }> = ({ isOpen, onClose, onLogin, onSwitchToRegister }) => {
+export const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogin: (username: string, password: string, remember: boolean) => Promise<string | true>; onSwitchToRegister: () => void }> = ({ isOpen, onClose, onLogin, onSwitchToRegister }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [remember, setRemember] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
 
     useEffect(() => {
         if (isOpen) {
-            setUsername('');
-            setPassword('');
+            // Tenta recuperar dados salvos
+            const saved = localStorage.getItem('company_creds');
+            if (saved) {
+                try {
+                    const { u, p } = JSON.parse(saved);
+                    setUsername(u || '');
+                    setPassword(p || '');
+                    setRemember(true);
+                } catch (e) { }
+            } else {
+                setUsername('');
+                setPassword('');
+                setRemember(false);
+            }
             setError('');
             setShowPassword(false);
         }
@@ -57,7 +70,7 @@ export const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogi
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
-        const result = await onLogin(username, password);
+        const result = await onLogin(username, password, remember);
         if (typeof result === 'string') {
             setError(result);
         }
@@ -93,7 +106,13 @@ export const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void; onLogi
                     </div>
                 </div>
                 <div className="flex items-center text-sm">
-                    <input id="remember" type="checkbox" className="w-4 h-4 border-slate-600 rounded bg-slate-700 focus:ring-blue-600 ring-offset-slate-800" />
+                    <input
+                        id="remember"
+                        type="checkbox"
+                        checked={remember}
+                        onChange={(e) => setRemember(e.target.checked)}
+                        className="w-4 h-4 border-slate-600 rounded bg-slate-700 focus:ring-blue-600 ring-offset-slate-800"
+                    />
                     <label htmlFor="remember" className="ml-2 font-medium text-slate-300">Salvar a senha</label>
                 </div>
 
