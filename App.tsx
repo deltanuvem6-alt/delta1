@@ -178,6 +178,7 @@ const App = () => {
                 blocked: p.blocked, password: p.password, whatsapp: p.whatsapp,
                 companyLogo: p.companies.logo, companyName: p.companies.name,
                 last_heartbeat: p.last_heartbeat,
+                created_at: p.created_at,
             }));
             setPosts(initialPosts);
         }

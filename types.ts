@@ -18,6 +18,7 @@ export interface Company {
   password: string;
   postCount: number;
   blocked: boolean;
+  created_at?: string | Date;
 }
 
 export interface ServicePost {
@@ -32,6 +33,7 @@ export interface ServicePost {
   whatsapp?: string;
   last_heartbeat?: string | null;
   current_session_id?: string | null;
+  created_at?: string | Date;
 }
 
 export enum EventType {

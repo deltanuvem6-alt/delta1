@@ -148,6 +148,7 @@ export const DashboardContent: React.FC<{
                                 <th scope="col" className="px-6 py-3">Usuário/Senha</th>
                                 <th scope="col" className="px-6 py-3">Status</th>
                                 <th scope="col" className="px-6 py-3 text-center">Postos</th>
+                                <th scope="col" className="px-6 py-3 text-center">Data</th>
                                 <th scope="col" className="px-6 py-3 text-center">Ações</th>
                             </tr>
                         </thead>
@@ -183,6 +184,9 @@ export const DashboardContent: React.FC<{
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-center">{company.postCount}</td>
+                                    <td className="px-6 py-4 text-center text-xs whitespace-nowrap">
+                                        {company.created_at ? new Date(company.created_at).toLocaleDateString('pt-BR') : '---'}
+                                    </td>
                                     <td className="px-6 py-4 text-center">
                                         <div className="flex justify-center items-center gap-3">
                                             <button onClick={() => onEdit(company)} className="text-blue-400 hover:text-blue-300" title="Editar"><EditIcon className="w-5 h-5" /></button>
@@ -247,6 +251,7 @@ export const ServicePostsContent: React.FC<{
                                 <th scope="col" className="px-6 py-3">Localização</th>
                                 <th scope="col" className="px-6 py-3">Senha</th>
                                 <th scope="col" className="px-6 py-3">WhatsApp</th>
+                                <th scope="col" className="px-6 py-3 text-center">Data</th>
                                 <th scope="col" className="px-6 py-3 text-center">Ações</th>
                             </tr>
                         </thead>
@@ -263,6 +268,20 @@ export const ServicePostsContent: React.FC<{
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
                                             <span className="text-gray-300">
+                                                {visiblePasswordId === post.id ? post.password : '••••••••'}
+                                            </span>
+                                            <button
+                                                onClick={() => setVisiblePasswordId(visiblePasswordId === post.id ? null : post.id)}
+                                                className="text-gray-400 hover:text-white"
+                                                title="Ver Senha"
+                                            >
+                                                <EyeIcon className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-gray-300">
                                                 {visibleWhatsappId === post.id ? (post.whatsapp || 'Não informado') : '••••••••'}
                                             </span>
                                             <button
@@ -273,6 +292,9 @@ export const ServicePostsContent: React.FC<{
                                                 <WhatsAppIcon className="w-5 h-5" />
                                             </button>
                                         </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-center text-xs whitespace-nowrap">
+                                        {post.created_at ? new Date(post.created_at).toLocaleDateString('pt-BR') : '---'}
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <div className="flex justify-center items-center gap-4">
