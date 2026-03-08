@@ -9,6 +9,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Carregar variáveis de ambiente
 dotenv.config();
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 
 // Forçar o fuso horário de Brasília (America/Sao_Paulo)
 process.env.TZ = 'America/Sao_Paulo';
@@ -49,9 +51,9 @@ console.log(`📧 [SMTP] Configurando host: ${smtpConfig.host}:${smtpConfig.port
 const transporter = nodemailer.createTransport({
     ...smtpConfig,
     // Adicionando um timeout para não deixar o robô travado em conexões lentas
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000
+    connectionTimeout: 60000,
+    greetingTimeout: 60000,
+    socketTimeout: 60000
 });
 
 // Template de Email
@@ -124,7 +126,8 @@ const checkAndSendEmails = async () => {
             .eq('notified', false)
             .in('type', notifyTypes)
             .gt('timestamp', fiveMinutesAgo)
-            .limit(5);
+            .limit(20);
+
 
         if (eventError) {
             console.error('❌ [ROBÔ] Erro ao buscar eventos do Supabase:', eventError.message);
@@ -162,7 +165,11 @@ const checkAndSendEmails = async () => {
                 });
                 await supabase.from('monitoring_events').update({ notified: true }).eq('id', event.id);
                 console.log(`✅ [ROBÔ] E-mail enviado com sucesso: ${event.id}`);
+
+                // Aguarda 2 segundos antes do próximo envio para não sobrecarregar o SMTP da Hostinger
+                await sleep(2000);
             } catch (mailError) {
+
                 console.error(`❌ [ROBÔ] Falha ao enviar e-mail para ${company.email}:`, mailError.message);
             }
         }
