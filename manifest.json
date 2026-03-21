@@ -1,0 +1,25 @@
+{
+  "short_name": "Alerta Vigia",
+  "name": "Alerta Vigia — Supervisor Digital",
+  "description": "A modern, clean CRM-style web application for 24/7 monitoring of security guards and access controllers.",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#050f23",
+  "background_color": "#050f23",
+  "dir": "auto"
+}
