@@ -678,6 +678,23 @@ const App = () => {
             }
         }
 
+        // TRAVA ANTI-DUPLICAÇÃO (24 HORAS) PARA "SEM COMUNICAÇÃO"
+        if (eventType === EventType.LocalSemInternet) {
+            const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const { data: existing } = await supabase
+                .from('monitoring_events')
+                .select('id')
+                .eq('post_id', postId)
+                .eq('type', EventType.LocalSemInternet)
+                .gt('timestamp', dayAgo)
+                .limit(1);
+
+            if (existing && existing.length > 0) {
+                console.log("[ANTI-DUP] Alerta de Sem Comunicação ignorado: já notificado nas últimas 24h.");
+                return true;
+            }
+        }
+
         const { data: newEventData, error } = await supabase
             .from('monitoring_events')
             .insert([{ post_id: postId, type: eventType, status: EventStatus.Unresolved }])
@@ -737,6 +754,7 @@ const App = () => {
 
         const now = new Date();
         const postsToCheck = currentUser.username === 'admin' ? posts : posts.filter(p => p.companyId === currentUser.id);
+        const window24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
         postsToCheck.forEach(post => {
             const config = alertaVigiaConfigs[post.id];
@@ -783,18 +801,18 @@ const App = () => {
 
                 const hasSystemEvent = eventsForPost.some(e =>
                     (e.type === EventType.SystemActivated || e.type === EventType.SystemDeactivated) &&
-                    e.timestamp >= windowAgo
+                    e.timestamp >= window24h
                 );
 
                 if (!hasSystemEvent) {
-                    // Verificar se já geramos este alerta específico nos últimos 20 minutos para evitar duplicidade
+                    // Verificar se já geramos este alerta específico nas últimas 24 horas para evitar duplicidade
                     const alreadyAlerted = eventsForPost.some(e =>
                         e.type === EventType.LocalSemInternet &&
-                        e.timestamp >= windowAgo
+                        e.timestamp >= window24h
                     );
 
                     if (!alreadyAlerted) {
-                        console.log(`[CHECK] Posto ${post.name}: Sem sinal de ativação/comunicação nos últimos 60 min. Gerando alerta.`);
+                        console.log(`[CHECK] Posto ${post.name}: Sem sinal de ativação/comunicação nas últimas 24h. Gerando alerta.`);
                         createEvent(post.id, EventType.LocalSemInternet);
                     }
                     return;
@@ -814,17 +832,17 @@ const App = () => {
 
                 const hasSystemEvent = eventsForPost.some(e =>
                     (e.type === EventType.SystemDeactivated || e.type === EventType.SystemActivated) &&
-                    e.timestamp >= windowAgo
+                    e.timestamp >= window24h
                 );
 
                 if (!hasSystemEvent) {
                     const alreadyAlerted = eventsForPost.some(e =>
                         e.type === EventType.LocalSemInternet &&
-                        e.timestamp >= windowAgo
+                        e.timestamp >= window24h
                     );
 
                     if (!alreadyAlerted) {
-                        console.log(`[CHECK] Posto ${post.name}: Sem sinal de desativação/comunicação nos últimos 60 min. Gerando alerta.`);
+                        console.log(`[CHECK] Posto ${post.name}: Sem sinal de desativação/comunicação nas últimas 24h. Gerando alerta.`);
                         createEvent(post.id, EventType.LocalSemInternet);
                     }
                     return;

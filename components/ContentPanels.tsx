@@ -298,14 +298,35 @@ export const ServicePostsContent: React.FC<{
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <div className="flex justify-center items-center gap-4">
-                                            <button onClick={() => onMonitor(post)} className="text-teal-400 hover:text-teal-300" title="Configurar Alerta"><MonitorIcon className="w-5 h-5" /></button>
-                                            <button onClick={() => onEdit(post)} className="text-blue-400 hover:text-blue-300" title="Editar"><EditIcon className="w-5 h-5" /></button>
+                                            <button 
+                                                onClick={() => !post.blocked && onMonitor(post)} 
+                                                disabled={post.blocked}
+                                                className={`transition-colors ${post.blocked ? 'text-gray-600 cursor-not-allowed opacity-50' : 'text-teal-400 hover:text-teal-300'}`}
+                                                title={post.blocked ? "Posto Bloqueado" : "Configurar Alerta"}
+                                            >
+                                                <MonitorIcon className="w-5 h-5" />
+                                            </button>
+                                            <button 
+                                                onClick={() => !post.blocked && onEdit(post)} 
+                                                disabled={post.blocked}
+                                                className={`transition-colors ${post.blocked ? 'text-gray-600 cursor-not-allowed opacity-50' : 'text-blue-400 hover:text-blue-300'}`}
+                                                title={post.blocked ? "Posto Bloqueado" : "Editar"}
+                                            >
+                                                <EditIcon className="w-5 h-5" />
+                                            </button>
                                             {isAdmin && (
                                                 <button onClick={() => onBlock(post)} className={post.blocked ? 'text-yellow-400 hover:text-yellow-300' : 'text-green-400 hover:text-green-300'} title={post.blocked ? 'Desbloquear' : 'Bloquear'}>
                                                     <LockIcon className="w-5 h-5" />
                                                 </button>
                                             )}
-                                            <button onClick={() => onDelete(post)} className="text-red-400 hover:text-red-300" title="Deletar"><TrashIcon className="w-5 h-5" /></button>
+                                            <button 
+                                                onClick={() => !post.blocked && onDelete(post)} 
+                                                disabled={post.blocked}
+                                                className={`transition-colors ${post.blocked ? 'text-gray-600 cursor-not-allowed opacity-50' : 'text-red-400 hover:text-red-300'}`}
+                                                title={post.blocked ? "Posto Bloqueado" : "Deletar"}
+                                            >
+                                                <TrashIcon className="w-5 h-5" />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
