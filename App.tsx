@@ -759,8 +759,8 @@ const App = () => {
         postsToCheck.forEach(post => {
             const config = alertaVigiaConfigs[post.id];
 
-            // Ignora se não tem config ou se é o posto ativo NESTE dispositivo
-            if (!config || post.id === activeVigiaPost?.id) {
+            // Ignora se não tem config, se é o posto ativo NESTE dispositivo OU se está BLOQUEADO
+            if (!config || post.id === activeVigiaPost?.id || post.blocked) {
                 return;
             }
 
